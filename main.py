@@ -10,8 +10,25 @@ phone = '17005769034'
 password = 'aaaa8888'
 proxy_server = 'http://localhost:8080'
 db_server = 'www.clavier.moe'
+accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
 
+class Account:
+    cookies = ""
+    db = ""
+    count = 0
+    def __init__(self):
+        api = '/login/cellphone'
+        self.db = pymongo.MongoClient(db_server, 27017).net_ease.account
+        params = {'phone':'17005769034', 'password':'aaaa8888'}
+        response = requests.get(url + api, params=params)
+        self.cookies = response.cookies
+        print('login successfully')
+    def save_accounts(self,lst):
+        for i in lst:
+            self.db.insert_one({'account':str(i), 'count':0})
 
+    def getCookies(self):
+        return self.cookies
 
 class Database:
     current = 0
@@ -34,33 +51,15 @@ class Database:
 
 
 
-# login
-def login(phone, password):
-    api = '/login/cellphone'
-    params = {'phone':phone, 'password':password}
-    response = requests.get(url + api, params=params)
-    cookies = response.cookies
-    print('login successfully')
-    return cookies
-
 pool = ProxyPool(proxy_server)
-cookies = login(phone, password)
 db = Database(db_server)
+account = Account()
 
-def get_user_detail(uid):
-    api = '/user/detail'
-    params = {'uid':uid}
-    response = requests.get(url + api, params=params, cookies=cookies)
-    print(response.json())
-    print('get user detail successfully')
-
-
-
-def user_exist(uid, proxies,db):
+def user_exist(uid, proxies,db,account):
     api = '/user/detail'
     # params = {'uid':str(uid)}
     params = {'uid':str(32953014)}
-    response = requests.get(url + api, params=params, cookies=cookies, proxies=proxies)
+    response = requests.get(url + api, params=params, cookies=account.getCookies(), proxies=proxies)
     json = response.json()
     print(json)
     if json['code'] != 200:
@@ -77,16 +76,15 @@ def user_exist(uid, proxies,db):
 def test():
     while 1:
         print(time.ctime(time.time()))
-        user_exist(db.get(),pool.get(),db)
+        user_exist(db.get(),pool.get(),db,account)
 
-db.clean()
-thread1 = threading.Thread(target=test)
-
-thread1.start()
-
-# db.close()
+# instancelist = [ threading.Thread(target=test) for i in range(29)]
+# for i in range(29):
+#     instancelist[i].start()
 
 
+account.save_accounts(accounts)
+print(account.cookies)
 
 
 # random
