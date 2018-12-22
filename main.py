@@ -6,8 +6,6 @@ import pymongo
 from proxy_pool import ProxyPool
 
 url = 'http://localhost:3000'
-phone = '17005769034'
-password = 'aaaa8888'
 proxy_server = 'http://localhost:8080'
 db_server = 'www.clavier.moe'
 accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
@@ -29,6 +27,9 @@ class Account:
 
     def getCookies(self):
         return self.cookies
+    def update(self):
+        newAccount = list(self.db.aggregate([{ '$sample': { 'size': 1 } }]))[0]
+        print(newAccount)
 
 class Database:
     current = 0
@@ -57,8 +58,7 @@ account = Account()
 
 def user_exist(uid, proxies,db,account):
     api = '/user/detail'
-    # params = {'uid':str(uid)}
-    params = {'uid':str(32953014)}
+    params = {'uid':str(uid)}
     response = requests.get(url + api, params=params, cookies=account.getCookies(), proxies=proxies)
     json = response.json()
     print(json)
@@ -86,6 +86,8 @@ def test():
 account.save_accounts(accounts)
 print(account.cookies)
 
+for i in range(10):
+    account.update()
 
 # random
 # print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
