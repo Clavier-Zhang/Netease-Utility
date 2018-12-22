@@ -13,23 +13,30 @@ accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
 class Account:
     cookies = ""
     db = ""
-    count = 0
+    account = ''
     def __init__(self):
         api = '/login/cellphone'
         self.db = pymongo.MongoClient(db_server, 27017).net_ease.account
-        params = {'phone':'17005769034', 'password':'aaaa8888'}
+        account = list(self.db.find().sort('used_times', -1).limit(1))[0]
+        params = {'phone':account['phone'], 'password':'aaaa8888'}
         response = requests.get(url + api, params=params)
         self.cookies = response.cookies
-        print('login successfully')
+        self.account = account
+
     def save_accounts(self,lst):
         for i in lst:
-            self.db.insert_one({'account':str(i), 'count':0})
+            self.db.insert_one({'phone':str(i), 'count':0})
 
     def getCookies(self):
         return self.cookies
-    def update(self):
-        newAccount = list(self.db.aggregate([{ '$sample': { 'size': 1 } }]))[0]
-        print(newAccount)
+
+    # def update(self):
+    #     self.db.update_one(self.account, {'$set':{'count':self.account['count'] + 1}})
+    #     newAccount = list(self.db.find().sort('', 1).limit(1))[0]
+    #     print(newAccount)
+    
+    def clean(self):
+        self.db.delete_many({})
 
 class Database:
     current = 0
@@ -83,11 +90,12 @@ def test():
 #     instancelist[i].start()
 
 
-account.save_accounts(accounts)
-print(account.cookies)
 
-for i in range(10):
-    account.update()
+account.save_accounts(accounts)
+print(list(account.db.find()))
+
+# for i in range(10):
+#     account.update()
 
 # random
 # print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
