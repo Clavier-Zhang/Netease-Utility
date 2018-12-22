@@ -40,6 +40,7 @@ class Database:
         lst = list(self.db.find().sort('uid', -1).limit(1))
         if len(lst) != 0:
             self.current = lst[0]['uid']
+        self.db.delete_many({})
     
     def save(self,uid):
         self.db.insert_one({'uid':uid})
@@ -90,9 +91,9 @@ def test():
         user_exist(db.get(),pool.get(),db)
 
 
-thread1 = threading.Thread(target=test)
+# thread1 = threading.Thread(target=test)
 
-thread1.start()
+# thread1.start()
 
 # db.close()
 
