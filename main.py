@@ -97,5 +97,5 @@ def test(low, high):
 
 # random
 # print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
-
+print(db.find().sort({uid:-1}).limit(1))
 # print(db.aggregate( {$sample: {size:1}} )
