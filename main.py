@@ -4,69 +4,27 @@ import threading
 import time
 import pymongo
 from proxy_pool import ProxyPool
+from data_base import Database
+from account_pool import AccountPool
+from user_pool import UserPool
+import datetime
 
-url = 'http://localhost:3000'
+api_server = 'http://localhost:3000'
 proxy_server = 'http://localhost:8080'
 db_server = 'www.clavier.moe'
 accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
 
-class Account:
-    cookies = ""
-    db = ""
-    account = ''
-    def __init__(self):
-        api = '/login/cellphone'
-        self.db = pymongo.MongoClient(db_server, 27017).net_ease.account
-        account = list(self.db.find().sort('used_times', -1).limit(1))[0]
-        params = {'phone':account['phone'], 'password':'aaaa8888'}
-        response = requests.get(url + api, params=params)
-        self.cookies = response.cookies
-        self.account = account
-
-    def save_accounts(self,lst):
-        for i in lst:
-            self.db.insert_one({'phone':str(i), 'count':0})
-
-    def getCookies(self):
-        return self.cookies
-
-    # def update(self):
-    #     self.db.update_one(self.account, {'$set':{'count':self.account['count'] + 1}})
-    #     newAccount = list(self.db.find().sort('', 1).limit(1))[0]
-    #     print(newAccount)
-    
-    def clean(self):
-        self.db.delete_many({})
-
-class Database:
-    current = 0
-    db = ""
-    def __init__(self,db_server):
-        self.db = pymongo.MongoClient(db_server, 27017).net_ease.user
-        lst = list(self.db.find().sort('uid', -1).limit(1))
-        if len(lst) != 0:
-            self.current = lst[0]['uid']
-    
-    def save(self,uid):
-        self.db.insert_one({'uid':uid})
-    
-    def get(self):
-        self.current = self.current + 1
-        return self.current
-
-    def clean(self):
-        self.db.delete_many({})
 
 
-
-pool = ProxyPool(proxy_server)
+proxy_pool = ProxyPool(proxy_server)
 db = Database(db_server)
-account = Account()
+account_pool = AccountPool(db_server, api_server)
+user_pool = UserPool(db_server)
 
 def user_exist(uid, proxies,db,account):
     api = '/user/detail'
     params = {'uid':str(uid)}
-    response = requests.get(url + api, params=params, cookies=account.getCookies(), proxies=proxies)
+    response = requests.get(api_server + api, params=params, cookies=account.getCookies(), proxies=proxies)
     json = response.json()
     print(json)
     if json['code'] != 200:
@@ -78,12 +36,31 @@ def user_exist(uid, proxies,db,account):
     return True
 
 
+def obtainSongList():
+    api = '/user/playlist'
+    params = {'uid':'96389275'}
+    response = requests.get(api_server + api, params=params)
+    playlists = response.json()['playlist']
+    # db = pymongo.MongoClient(db_server, 27017).net_ease.song
+    # song_id_list = []
+    for playlist in playlists:
+        id = playlist['id']
+        api = '/playlist/detail'
+        params = {'id':id}
+        response = requests.get(api_server + api, params=params)
+        songList = response.json()['playlist']['tracks']
+        for song in songList:
+            # song_id_list.append(song['id'])
+            db.insert_song({'id':song['id']})
+            print(datetime.datetime.now(), end='')
+            print("insert one")
 
 
-def test():
-    while 1:
-        print(time.ctime(time.time()))
-        user_exist(db.get(),pool.get(),db,account)
+
+# def test():
+#     while 1:
+#         print(time.ctime(time.time()))
+#         user_exist(db.get(),pool.get(),db,account)
 
 # instancelist = [ threading.Thread(target=test) for i in range(29)]
 # for i in range(29):
@@ -91,12 +68,17 @@ def test():
 
 
 
-account.save_accounts(accounts)
-print(list(account.db.find()))
+# account.save_accounts(accounts)
+# print(list(account.db.find()))
 
 # for i in range(10):
 #     account.update()
 
+# print(db.get_one_song_id())
+# account.obtainSimilarUser('347230')
+# obtainSongList()
+
+# print(db.get_one_song())
 # random
 # print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
 # print(list(db.find().sort('uid', -1).limit(1)))
