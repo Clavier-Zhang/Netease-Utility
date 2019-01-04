@@ -60,9 +60,9 @@ class AccountPool:
             self.update_current_account()
         return self.cookies
 
-    def print(self, content):
+    def print(self, content, end='\n'):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
-        print(content)
+        print(content, end)
 
     def update_current_acount_used_times_by_one(self):
         myquery = { "phone": self.account['phone'] }
@@ -76,6 +76,7 @@ class AccountPool:
         response = requests.get(self.api_server + self.login_api, params=params)
         self.cookies = response.cookies
         self.account = account
+        self.print('update account to ', end='')
         print(self.account)
         
         
