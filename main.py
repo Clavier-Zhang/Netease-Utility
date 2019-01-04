@@ -16,25 +16,9 @@ accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
 
 
 
-proxy_pool = ProxyPool(proxy_server)
+
 db = Database(db_server)
-account_pool = AccountPool(db_server, api_server)
 user_pool = UserPool(db_server, api_server, proxy_server)
-
-def user_exist(uid, proxies,db,account):
-    api = '/user/detail'
-    params = {'uid':str(uid)}
-    response = requests.get(api_server + api, params=params, cookies=account.getCookies(), proxies=proxies)
-    json = response.json()
-    print(json)
-    if json['code'] != 200:
-        print('error')
-        print(json)
-        return False
-    db.save(uid)
-    print('user' + str(uid) + 'exists')
-    return True
-
 
 def obtainSongList():
     api = '/user/playlist'
@@ -55,7 +39,6 @@ def obtainSongList():
             print(datetime.datetime.now(), end='')
             print("insert one")
 
-# print(account_pool.get_one_phone())
 
 # def test():
 #     while 1:
@@ -66,23 +49,8 @@ def obtainSongList():
 # for i in range(29):
 #     instancelist[i].start()
 
+# user_pool.delete_all_uids()
+# user_pool.insert_one_uid(96389275)
+print(user_pool.get_one_user(119583034))
+# user_pool.search_neighbours(user_pool.get_one_unsearched_uid())
 
-for i in range(1, 100):
-    account_pool.update_current_account()
-
-# account.save_accounts(accounts)
-# print(list(account.db.find()))
-
-# for i in range(10):
-#     account.update()
-
-# print(db.get_one_song_id())
-# account.obtainSimilarUser('347230')
-# obtainSongList()
-
-# print(db.get_one_song())
-# random
-# print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
-# print(list(db.find().sort('uid', -1).limit(1)))
-
-# print(db.aggregate( {$sample: {size:1}} )
