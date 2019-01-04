@@ -61,7 +61,7 @@ class UserPool:
     def search_neighbours(self, uid):
         get_followers_api = '/user/followeds'
         params = {'uid': uid, 'limit': 1000}
-        response = requests.get(self.api_server + get_followers_api, params=params).json()
+        response = requests.get(self.api_server + get_followers_api, params=params, proxies=ProxyPool.get()).json()
         if response['code'] != 200:
             self.print('fail to search neighbours of ' + str(uid))
             return None
