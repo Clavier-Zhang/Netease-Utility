@@ -10,13 +10,13 @@ class ProxyPool:
         self.current['https'] = response.text
         self.count = 0
 
-    def update(self):
-        response = requests.get(self.api)
-        self.current['https'] = response.text
-        self.count = 0
-
     def get(self):
         self.count = self.count + 1
         if self.count == 20:
             self.update()
         return self.current
+
+    def update(self):
+        response = requests.get(self.api)
+        self.current['https'] = response.text
+        self.count = 0

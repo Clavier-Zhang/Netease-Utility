@@ -19,7 +19,7 @@ accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
 proxy_pool = ProxyPool(proxy_server)
 db = Database(db_server)
 account_pool = AccountPool(db_server, api_server)
-user_pool = UserPool(db_server)
+user_pool = UserPool(db_server, api_server, proxy_server)
 
 def user_exist(uid, proxies,db,account):
     api = '/user/detail'
@@ -55,7 +55,7 @@ def obtainSongList():
             print(datetime.datetime.now(), end='')
             print("insert one")
 
-
+# print(account_pool.get_one_phone())
 
 # def test():
 #     while 1:
@@ -67,6 +67,8 @@ def obtainSongList():
 #     instancelist[i].start()
 
 
+for i in range(1, 100):
+    account_pool.update_current_account()
 
 # account.save_accounts(accounts)
 # print(list(account.db.find()))
