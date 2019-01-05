@@ -29,37 +29,5 @@ account_pool = AccountPool(db_server, api_server)
 # thread.start_threads(user_pool.search_neighbour_thread, 50)
 
 client = Client(db_server, api_server, proxy_server, clavier)
-client.find_most_similar_user_in_samples(100)
+client.find_most_similar_user_in_samples(1000)
 
-# def obtainSongList():
-#     api = '/user/playlist'
-#     params = {'uid':'96389275'}
-#     response = requests.get(api_server + api, params=params)
-#     playlists = response.json()['playlist']
-#     # db = pymongo.MongoClient(db_server, 27017).net_ease.song
-#     # song_id_list = []
-#     for playlist in playlists:
-#         id = playlist['id']
-#         api = '/playlist/detail'
-#         params = {'id':id}
-#         response = requests.get(api_server + api, params=params)
-#         songList = response.json()['playlist']['tracks']
-#         for song in songList:
-#             # song_id_list.append(song['id'])
-#             db.insert_song({'id':song['id']})
-#             print(datetime.datetime.now(), end='')
-#             print("insert one")
-
-
-
-# instancelist = [ threading.Thread(target=test) for i in range(29)]
-
-# user_pool.delete_all_uids()
-# user_pool.insert_one_uid(96389275)
-# print(user_pool.get_one_user(119583034))
-# user_pool.search_neighbours(user_pool.get_one_unsearched_uid())
-
-# user_pool.search_neighbour_thread()
-
-
-# user_pool.delete_duplicates()
