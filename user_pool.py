@@ -183,15 +183,20 @@ class UserPool:
         cookies = self.get_cookies()
 
         response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
+
         if response['code'] == -460:
             print('detect cheating')
+            print(response)
+            
             self.lock.acquire()
             self.account_pool.update_current_account()
             self.cookies = self.account_pool.getCookies()
             self.lock.release()
+
             self.fail_search += 1
             self.total_search += 1
             return []
+
         if response['code'] == -2:
             # self.print('Fail: Unable to search ' + str(uid))
             self.delete_one_uid(uid)

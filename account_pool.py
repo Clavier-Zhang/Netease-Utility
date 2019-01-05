@@ -22,25 +22,26 @@ class AccountPool:
         self.api_server = api_server
         self.db_server = db_server
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
+        
         account = list(self.db.find().sort('used_times', -1).limit(1))[0]
-        params = {'phone':account['phone'], 'password': self.common_password}
+        params = {'phone':account['phone'], 'password': account['password']}
         response = requests.get(self.api_server + self.login_api, params=params)
         self.cookies = response.cookies
         self.account = account
         
 
-    def insert_one_phone(self, phone):
+    def insert_one_phone(self, phone, password):
         sames = list(self.
         db.find({'phone':str(phone)}))
         if len(sames) > 0:
             print('insert fail, ' +  str(phone) +  ' is repeated')
             return
-        self.db.insert_one({'phone':str(phone), 'used_times':0})
+        self.db.insert_one({'phone': str(phone), 'password': password, 'used_times':0})
         self.print('insert phone ' + str(phone) + ' successfully')
     
-    def insert_all_phones(self, phones):
+    def insert_all_phones(self, phones, password):
         for phone in phones:
-            self.insert_one_phone(phone)
+            self.insert_one_phone(phone, password)
         self.print('insert all phones successfully')
 
     def delete_all_phones(self):
@@ -77,7 +78,7 @@ class AccountPool:
         self.cookies = response.cookies
         self.account = account
         self.current_account_used_times = 0
-        # self.print('update account to ' + str(self.account['phone'] + ' used times: ' + str(self.account['used_times'])))
+        self.print('update account to ' + str(self.account['phone'] + ' used times: ' + str(self.account['used_times'])))
         
         
 
