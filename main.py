@@ -1,88 +1,65 @@
 import requests
-import _thread
-import threading
-import time
-import pymongo
-from proxy_pool import ProxyPool
-from data_base import Database
-from account_pool import AccountPool
 from user_pool import UserPool
+from account_pool import AccountPool
 import datetime
+from thread_pool import ThreadPool
+from client import Client
 
 api_server = 'http://localhost:3000'
 proxy_server = 'http://localhost:8080'
 db_server = 'www.clavier.moe'
 accounts = [17005769034, 17002953591, 13463072084, 17020651463, 17009317235]
+clavier = 96389275
 
 
 
-
-db = Database(db_server)
 user_pool = UserPool(db_server, api_server, proxy_server)
+account_pool = AccountPool(db_server, api_server)
 
-def user_exist(uid, proxies,db,account):
-    api = '/user/detail'
-    params = {'uid':str(uid)}
-    response = requests.get(api_server + api, params=params, cookies=account.getCookies(), proxies=proxies)
-    json = response.json()
-    print(json)
-    if json['code'] != 200:
-        print('error')
-        print(json)
-        return False
-    db.save(uid)
-    print('user' + str(uid) + 'exists')
-    return True
+# print(account_pool.getCookies())
 
-
-def obtainSongList():
-    api = '/user/playlist'
-    params = {'uid':'96389275'}
-    response = requests.get(api_server + api, params=params)
-    playlists = response.json()['playlist']
-    # db = pymongo.MongoClient(db_server, 27017).net_ease.song
-    # song_id_list = []
-    for playlist in playlists:
-        id = playlist['id']
-        api = '/playlist/detail'
-        params = {'id':id}
-        response = requests.get(api_server + api, params=params)
-        songList = response.json()['playlist']['tracks']
-        for song in songList:
-            # song_id_list.append(song['id'])
-            db.insert_song({'id':song['id']})
-            print(datetime.datetime.now(), end='')
-            print("insert one")
-
-# print(account_pool.get_one_phone())
-
-# def test():
-#     while 1:
-#         print(time.ctime(time.time()))
-#         user_exist(db.get(),pool.get(),db,account)
-
-# instancelist = [ threading.Thread(target=test) for i in range(29)]
-# for i in range(29):
-#     instancelist[i].start()
 # user_pool.delete_all_uids()
 # user_pool.insert_one_uid(96389275)
-print(user_pool.get_one_user(119583034))
+# user_pool.delete_duplicates()
+
+
+# thread = ThreadPool()
+# thread.start_thread(user_pool.refill_task_queue_thread)
+# thread.start_threads(user_pool.upload_result_thread, 200)
+# thread.start_threads(user_pool.search_neighbour_thread, 50)
+
+client = Client(db_server, api_server, proxy_server, clavier)
+client.find_most_similar_user_in_samples(100)
+
+# def obtainSongList():
+#     api = '/user/playlist'
+#     params = {'uid':'96389275'}
+#     response = requests.get(api_server + api, params=params)
+#     playlists = response.json()['playlist']
+#     # db = pymongo.MongoClient(db_server, 27017).net_ease.song
+#     # song_id_list = []
+#     for playlist in playlists:
+#         id = playlist['id']
+#         api = '/playlist/detail'
+#         params = {'id':id}
+#         response = requests.get(api_server + api, params=params)
+#         songList = response.json()['playlist']['tracks']
+#         for song in songList:
+#             # song_id_list.append(song['id'])
+#             db.insert_song({'id':song['id']})
+#             print(datetime.datetime.now(), end='')
+#             print("insert one")
+
+
+
+# instancelist = [ threading.Thread(target=test) for i in range(29)]
+
+# user_pool.delete_all_uids()
+# user_pool.insert_one_uid(96389275)
+# print(user_pool.get_one_user(119583034))
 # user_pool.search_neighbours(user_pool.get_one_unsearched_uid())
 
+# user_pool.search_neighbour_thread()
 
-# account.save_accounts(accounts)
-# print(list(account.db.find()))
 
-# for i in range(10):
-#     account.update()
-
-# print(db.get_one_song_id())
-# account.obtainSimilarUser('347230')
-# obtainSongList()
-
-# print(db.get_one_song())
-# random
-# print(list(db.aggregate([{ '$sample': { 'size': 1 } }])))
-# print(list(db.find().sort('uid', -1).limit(1)))
-
-# print(db.aggregate( {$sample: {size:1}} )
+# user_pool.delete_duplicates()

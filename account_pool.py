@@ -16,7 +16,7 @@ class AccountPool:
     db = ""
     account = ''
     current_account_used_times = 0
-    current_account_max_user_times = 10
+    current_account_max_user_times = 20
 
     def __init__(self, db_server, api_server):
         self.api_server = api_server
@@ -30,7 +30,8 @@ class AccountPool:
         
 
     def insert_one_phone(self, phone):
-        sames = list(self.db.find({'phone':str(phone)}))
+        sames = list(self.
+        db.find({'phone':str(phone)}))
         if len(sames) > 0:
             print('insert fail, ' +  str(phone) +  ' is repeated')
             return
@@ -76,7 +77,7 @@ class AccountPool:
         self.cookies = response.cookies
         self.account = account
         self.current_account_used_times = 0
-        self.print('update account to ' + str(self.account['phone'] + ' used times: ' + str(self.account['used_times'])))
+        # self.print('update account to ' + str(self.account['phone'] + ' used times: ' + str(self.account['used_times'])))
         
         
 
