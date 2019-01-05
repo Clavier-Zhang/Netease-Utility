@@ -187,11 +187,9 @@ class UserPool:
         if response['code'] == -460:
             print('detect cheating')
             print(response)
-            
-            self.lock.acquire()
+
             self.account_pool.update_current_account()
             self.cookies = self.account_pool.getCookies()
-            self.lock.release()
 
             self.fail_search += 1
             self.total_search += 1
