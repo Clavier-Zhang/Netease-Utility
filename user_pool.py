@@ -180,14 +180,9 @@ class UserPool:
             thread.start()
         self.print('Success: Start searching valid users task')
 
-
-
-
-
-
-    def get_uid_samples(self, num):
+    def get_uid_sample_queue(self, size):
         uids = queue.Queue()
-        for user in self.db.aggregate([{ '$sample': { 'size': num } }]):
+        for user in self.db.aggregate([{ '$sample': { 'size': size } }]):
             uids.put(user['uid'])
         return uids
 
