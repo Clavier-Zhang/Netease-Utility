@@ -36,18 +36,18 @@ class AccountPool:
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
         self.thread_pool = ThreadPool()
         self.proxy_pool = ProxyPool(proxy_server)
-        accounts = list(self.db.find())
-        for account in accounts:
-            params = {'phone':account['phone'], 'password': account['password']}
-            response = requests.get(self.api_server + self.login_api, params=params, proxies=self.proxy_pool.get())
-            if response.json()['code'] != 200:
-                self.print('Fail: The account ' + str(account['phone'] + ' has issues, cannot login'))
-                continue
-            self.all_cookies.append(response.cookies)
-        for cookie in self.all_cookies:
-            self.available_cookie_queue.put(cookie)
-        self.thread_pool.start_threads(self.refill_thread, 1)
-        self.print('Success: Finish initializing the account pool')
+        # accounts = list(self.db.find())
+        # for account in accounts:
+        #     params = {'phone':account['phone'], 'password': account['password']}
+        #     response = requests.get(self.api_server + self.login_api, params=params, proxies=self.proxy_pool.get())
+        #     if response.json()['code'] != 200:
+        #         self.print('Fail: The account ' + str(account['phone'] + ' has issues, cannot login'))
+        #         continue
+        #     self.all_cookies.append(response.cookies)
+        # for cookie in self.all_cookies:
+        #     self.available_cookie_queue.put(cookie)
+        # self.thread_pool.start_threads(self.refill_thread, 1)
+        # self.print('Success: Finish initializing the account pool')
     
     def refill(self):
         for cookie in self.all_cookies:
