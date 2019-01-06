@@ -32,7 +32,7 @@ class UserPool:
     total_search = 0
 
     account_pool = ''
-    cookies = ''
+
 
 
     terminate = False
@@ -45,12 +45,11 @@ class UserPool:
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.user
         self.proxy_pool = ProxyPool(self.proxy_server)
         self.account_pool = AccountPool(self.db_server, self.api_server, self.proxy_server)
-        self.cookies = self.account_pool.getCookies()
         
-
     def set_terminate(self):
         self.terminate = True
         self.account_pool.set_terminate()
+        self.proxy_pool.set_terminate()
 
     def insert_one_uid(self, uid):
         sames = list(self.db.find({'uid': uid}))
@@ -65,7 +64,7 @@ class UserPool:
     def insert_all_uids(self, uids):
         for uid in uids:
             self.insert_one_uid(uid)
-        self.print('insert all users successfully')
+        # self.print('insert all users successfully')
 
     def delete_all_uids(self):
         self.db.delete_many({})
@@ -74,10 +73,6 @@ class UserPool:
     def delete_one_uid(self, uid):
         self.db.delete_one({'uid': uid})
         # self.print('Success: Finish delete ' + str(uid))
-
-    def print(self, content):
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
-        print(content)
 
     def set_uid_searched(self, uid):
         myquery = { 'uid': uid }
@@ -177,14 +172,45 @@ class UserPool:
             uids.put(user['uid'])
         return uids
 
-    def get_cookies(self):
-        self.lock.acquire()
-        self.cookies = self.account_pool.getCookies()
-        self.lock.release()
-        cookies = self.cookies
-        return cookies
 
-    def get_song_id_set(self, uid):
+    def get_favourite_id_set(self, uid):
+        get_favourite_api = '/user/record'
+        params = {'uid': uid, 'type': 0}
+        cookies = self.account_pool.getCookies()
+        if len(cookies) == 0:
+            self.print('i guess the account has issue, not cookie problem')
+            print(cookies)
+            print(self.account_pool.available_cookie_queue.qsize())
+            return []
+
+        response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
+
+        if response['code'] == -460:
+            print('detect cheating')
+            print(response)
+
+            self.fail_search += 1
+            self.total_search += 1
+            return []
+
+        if response['code'] == -2:
+            # self.print('Fail: Unable to search ' + str(uid))
+            self.delete_one_uid(uid)
+            self.fail_search += 1
+            self.total_search += 1
+            return []
+        songs = response['allData']
+        song_ids = set()
+        for song in songs:
+            song_ids.add(song['song']['song']['id'])
+        self.success_search += 1
+        self.total_search += 1
+        if self.total_search % 10 == 0:
+            self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
+        
+        return song_ids
+    
+    def get_all_song_id_set(self, uid):
         get_favourite_api = '/user/record'
         params = {'uid': uid, 'type': 0}
         cookies = self.account_pool.getCookies()
@@ -221,3 +247,6 @@ class UserPool:
         
         return song_ids
 
+    def print(self, content):
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
+        print(content)

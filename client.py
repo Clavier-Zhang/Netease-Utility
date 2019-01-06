@@ -26,7 +26,7 @@ class Client:
         self.api_server = api_server
         self.client_uid = client_uid
         self.user_pool = UserPool(db_server, api_server, proxy_server)
-        self.client_song_id_set = self.user_pool.get_song_id_set(self.client_uid)
+        self.client_song_id_set = self.user_pool.get_favourite_id_set(self.client_uid)
 
     def find_most_similar_user_in_samples(self, sample_num):
         self.print('Start looking for most similar user')
@@ -56,7 +56,7 @@ class Client:
                 continue
             else:
                 other = self.waiting_task.get()
-                other_song_ids = self.user_pool.get_song_id_set(other)
+                other_song_ids = self.user_pool.get_favourite_id_set(other)
                 current_count = 0
                 for song_id in other_song_ids:
                     if song_id in self.client_song_id_set:

@@ -4,12 +4,14 @@ from account_pool import AccountPool
 import datetime
 from thread_pool import ThreadPool
 from client import Client
+from proxy_pool import ProxyPool
+import time
 
 api_server = 'http://localhost:3000'
-proxy_server = 'http://localhost:8080'
+proxy_server = 'www.clavier.moe:8088'
 db_server = 'www.clavier.moe'
 clavier = 96389275
-
+test = 93441553
 
 accounts1 = [
     17005769034,
@@ -127,9 +129,9 @@ password3 = 'qwe123'
 
 
 
-account_pool = AccountPool(db_server, api_server, proxy_server)
-account_pool.delete_all_phones()
-account_pool.insert_all_phones(accounts3, password3)
+# account_pool = AccountPool(db_server, api_server, proxy_server)
+# account_pool.delete_all_phones()
+# account_pool.insert_all_phones(accounts3, password3)
 
 # user_pool.delete_all_uids()
 # user_pool.insert_one_uid(96389275)
@@ -143,5 +145,7 @@ account_pool.insert_all_phones(accounts3, password3)
 # thread.start_threads(user_pool.upload_result_thread, 200)
 # thread.start_threads(user_pool.search_neighbour_thread, 50)
 
-# client = Client(db_server, api_server, proxy_server, clavier)
+# client = Client(db_server, api_server, proxy_server, test)
 # client.find_most_similar_user_in_samples(1000)
+
+
