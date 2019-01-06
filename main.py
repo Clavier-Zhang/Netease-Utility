@@ -137,7 +137,7 @@ password3 = 'qwe123'
 # user_pool.insert_one_uid(96389275)
 # user_pool.delete_duplicates()
 
-
+account = AccountPool(db_server, api_server, proxy_server)
 
 # user_pool = UserPool(db_server, api_server, proxy_server)
 # thread = ThreadPool()

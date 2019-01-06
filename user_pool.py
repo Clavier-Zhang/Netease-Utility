@@ -176,11 +176,11 @@ class UserPool:
     def get_favourite_id_set(self, uid):
         get_favourite_api = '/user/record'
         params = {'uid': uid, 'type': 0}
-        cookies = self.account_pool.getCookies()
+        cookies = self.account_pool.get_cookie()
         if len(cookies) == 0:
             self.print('i guess the account has issue, not cookie problem')
             print(cookies)
-            print(self.account_pool.available_cookie_queue.qsize())
+            print(self.account_pool.cookie_queue.qsize())
             return []
 
         response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
@@ -213,7 +213,7 @@ class UserPool:
     def get_all_song_id_set(self, uid):
         get_favourite_api = '/user/record'
         params = {'uid': uid, 'type': 0}
-        cookies = self.account_pool.getCookies()
+        cookies = self.account_pool.get_cookie()
         if len(cookies) == 0:
             self.print('i guess the account has issue, not cookie problem')
             print(cookies)

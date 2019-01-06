@@ -3,57 +3,64 @@ import requests
 import time
 from proxy_pool import ProxyPool
 import queue
-from thread_pool import ThreadPool
+import threading
 
 class AccountPool:
 
     api_server = ''
     db_server = ''
 
-    login_api = '/login/cellphone'
+    db = ''
 
-    db = ""
+    source_cookies = []
 
-    all_cookies = []
-
-    available_cookie_queue = queue.Queue()
-
-    thread_pool = ''
+    cookie_queue = queue.Queue()
+    cookie_queue_max_size = 1000
+    cookie_queue_min_size = 200
 
     proxy_pool = ''
 
+    refill_thread = ''
     terminate = False
 
     def __init__(self, db_server, api_server, proxy_server):
         self.print('Pending: Start initializing the account pool')
         self.api_server = api_server
         self.db_server = db_server
+
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
-        self.thread_pool = ThreadPool()
         self.proxy_pool = ProxyPool(proxy_server)
+
+        self.login_accounts()
+
+        self.refill_thread = threading.Thread(target=self.refill_tasks)
+        self.refill_thread.start()
+
+        self.print('Success: Finish initializing the account pool')
+
+    def login_accounts(self):
         accounts = list(self.db.find())
+        success = 0
+        fail = 0
         for account in accounts:
             params = {'phone':account['phone'], 'password': account['password']}
-            response = requests.get(self.api_server + self.login_api, params=params, proxies=self.proxy_pool.get())
+            response = requests.get(self.api_server + '/login/cellphone', params=params, proxies=self.proxy_pool.get())
             if response.json()['code'] != 200:
                 print(response.json())
-                self.print('Fail: The account ' + str(account['phone'] + ' has issues, cannot login'))
+                self.print('Fail: The account ' + str(account['phone'] + ' cannot login'))
+                fail += 1
                 continue
-            self.all_cookies.append(response.cookies)
-        for cookie in self.all_cookies:
-            self.available_cookie_queue.put(cookie)
-        self.thread_pool.start_threads(self.refill_thread, 1)
-        self.print('Success: Finish initializing the account pool')
+            success += 1
+            self.source_cookies.append(response.cookies)
+        self.print('Success: Finish login, ' + str(success) + ' success' + str(fail) + ' fail')
     
     def refill(self):
-        for cookie in self.all_cookies:
-            self.available_cookie_queue.put(cookie)
-        # print('current queue size ' + str(self.available_cookie_queue.qsize()))
+        for cookie in self.source_cookies:
+            self.cookie_queue.put(cookie)
         
-    def refill_thread(self):
-        self.print('Pending: Preparing cookies')
+    def refill_tasks(self):
         while not self.terminate:
-            if self.available_cookie_queue.qsize() < 1000:
+            if self.cookie_queue.qsize() < self.cookie_queue_max_size:
                 self.refill()
             else:
                 time.sleep(1)
@@ -61,37 +68,34 @@ class AccountPool:
     def set_terminate(self):
         self.terminate = True
 
+    def is_available(self):
+        return self.cookie_queue > self.cookie_queue_min_size
+
     def insert_one_phone(self, phone, password):
-        sames = list(self.
-        db.find({'phone':str(phone)}))
+        sames = list(self.db.find({'phone': str(phone)}))
         if len(sames) > 0:
-            self.print('insert fail, ' +  str(phone) +  ' is repeated')
-            return
-        self.db.insert_one({'phone': str(phone), 'password': password, 'used_times':0})
-        self.print('insert phone ' + str(phone) + ' successfully')
+            self.print('Fail: Unable to insert repeated ' +  str(phone))
+            return False
+        self.db.insert_one({'phone': str(phone), 'password': password})
+        self.print('Success: Finish inserting phone ' + str(phone))
+        return True
     
     def insert_all_phones(self, phones, password):
+        success = 0
+        fail = 0
         for phone in phones:
-            self.insert_one_phone(phone, password)
-        self.print('insert all phones successfully')
+            if self.insert_one_phone(phone, password):
+                success += 1
+            else:
+                fail += 1
+        self.print('Success: Finish inserting all phones, ' + str(success) + ' success, ' + str(fail) + ' fail')
 
     def delete_all_phones(self):
-        self.db.delete_many({})
-        self.print('delete all phones successfully')
+        self.db.delete_many()
+        self.print('Success: Finish deleting all phones')
 
-    def get_one_smallest_used_phone(self):
-        results = list(self.db.find().sort('used_times', -1).limit(1))
-        if len(results) <= 0:
-            self.print('fail to get any phone')
-            return
-        return results[0]['phone']
-
-    def getCookies(self):
-        return self.available_cookie_queue.get()
-
-    def cookies_availble(self):
-        
-        return self.available_cookie_queue.qsize() > 0
+    def get_cookie(self):
+        return self.cookie_queue.get()
 
     def print(self, content):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')

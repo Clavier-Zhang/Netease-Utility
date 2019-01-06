@@ -35,7 +35,7 @@ class Client:
 
         self.waiting_task = self.user_pool.get_uid_samples(sample_num)
 
-        while self.user_pool.account_pool.available_cookie_queue.qsize() < 500:
+        while self.user_pool.account_pool.cookie_queue.qsize() < 500:
             print('wait for start')
             time.sleep(1)
 
@@ -50,7 +50,7 @@ class Client:
 
     def compare_song_list_thread(self):
         while self.waiting_task.qsize() > 0:
-            if not self.user_pool.account_pool.cookies_availble():
+            if not self.user_pool.account_pool.is_available():
                 time.sleep(1)
                 print('sleep !!!!')
                 continue
