@@ -22,8 +22,5 @@ class Database:
             print('repeat')
             return
         self.cursor.user.insert_one({'uid':uid})
-    
-    def get_one_user(self):
-        self.cursor.song.find_one()
 
         

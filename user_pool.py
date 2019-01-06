@@ -16,14 +16,38 @@ class UserPool:
 
     proxy_pool = ''
 
+    uid_queue = queue.Queue()
+    uid_queue_max_size = 1000
+    uid_queue_min_size = 200
+
+
     lock = threading.RLock()
     thread_num = 0
 
-    task_queue = queue.Queue()
-    result_queue = queue.Queue()
-    result_queue_capacity = 200
+
+
+
+
+    unsearched_uid_queue = queue.Queue()
+    unsearched_uid_queue_min_size = 200
+    unsearched_uid_queue_max_size = 1000
+
+    upload_queue = queue.Queue()
+    upload_queue_min_size = 0
+    upload_queue_max_size = 1000
+
+    waiting_for_search_queue = queue.Queue()
+    waiting_for_search_queue_min_size = 200
+    waiting_for_search_queue_max_size = 1000
+
+    upload_threads = []
+    refill_threads = []
+    search_threads = []
 
     uploaded_num = 0
+    terminate = False
+
+
 
 
 
@@ -33,10 +57,7 @@ class UserPool:
 
     account_pool = ''
 
-
-
-    terminate = False
-
+    
 
     def __init__(self, db_server, api_server, proxy_server):
         self.db_server = db_server
@@ -51,77 +72,20 @@ class UserPool:
         self.account_pool.set_terminate()
         self.proxy_pool.set_terminate()
 
-    def insert_one_uid(self, uid):
+    def insert_one_user(self, uid):
         sames = list(self.db.find({'uid': uid}))
         if len(sames) > 0:
-            # self.print('Fail: unable to insert, ' +  str(uid) +  ' is repeated')
             return False
         self.db.insert_one({'uid': uid, 'searched': False})
-        # self.task_queue.put(uid)
-        # self.print('Success: finish inserting user ' + str(uid))
         return True
-    
-    def insert_all_uids(self, uids):
-        for uid in uids:
-            self.insert_one_uid(uid)
-        # self.print('insert all users successfully')
 
-    def delete_all_uids(self):
+    def delete_all_users(self):
         self.db.delete_many({})
-        self.print('delete all users successfully')
+        self.print('Success: Finish delete all users')
 
-    def delete_one_uid(self, uid):
+    def delete_one_user(self, uid):
         self.db.delete_one({'uid': uid})
-        # self.print('Success: Finish delete ' + str(uid))
 
-    def set_uid_searched(self, uid):
-        myquery = { 'uid': uid }
-        newvalues = { "$set": { "searched": True } }
-        self.db.update_one(myquery, newvalues)
-
-    def get_one_unsearched_uid(self):
-        return self.task_queue.get()
-
-    def get_one_user(self, uid):
-        return list(self.db.find({'uid': uid}))
-
-    def search_neighbours_for_one(self):
-        get_followers_api = '/user/followeds'
-
-        uid = self.get_one_unsearched_uid()
-
-        params = {'uid': uid, 'limit': 50}
-        response = requests.get(self.api_server + get_followers_api, params=params, proxies=self.proxy_pool.get()).json()
-        if response['code'] != 200:
-            self.print('Fail: unable to search neighbours of ' + str(uid))
-            self.print(response)
-            return None
-        neighbour_num = 0
-        neighbours = response['followeds']
-        for neighbour in neighbours:
-            self.result_queue.put(neighbour['userId'])
-            neighbour_num += 1
-        # self.print('Success: finish searching neighbours of ' + str(uid) + ', found ' + str(neighbour_num) + ' new uids')
-    
-    def upload_result(self):
-        while self.result_queue.qsize() > 0:
-            uid = self.result_queue.get()
-            self.insert_one_uid(uid)
-            self.uploaded_num += 1
-            if self.uploaded_num % 100 == 0:
-                self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.result_queue.qsize()) + ' to be uploaded')
-
-    def refill_task_queue(self, num):
-        self.print('Pending: Start refill the task queue')
-        users = list(self.db.find({ 'searched': False }).limit(num))
-        if len(users) <= 0:
-            self.print('Fail: unable to refill the task queue')
-            return
-        for user in users:
-            self.task_queue.put(user['uid'])
-            self.set_uid_searched(user['uid'])
-        self.print('Success: Finish refill the task queue with ' + str(len(users)) + ' data')
-        
     def delete_duplicates(self):
         self.print('Success: Start Delete duplicates')
         cursor = self.db.aggregate(
@@ -130,7 +94,6 @@ class UserPool:
                 {"$match": {"count": { "$gte": 2 }}}
             ]
         )
-
         response = []
         for doc in cursor:
             del doc["unique_ids"][0]
@@ -138,33 +101,83 @@ class UserPool:
                 response.append(id)
         print(response)
         self.db.remove({"_id": {"$in": response}})
+        self.print('Success: Finish deleting ' + str(len(response)) + ' duplicates')
 
-        self.print('Success: Delete ' + str(len(response)) + ' duplicates')
+    def set_uid_searched(self, uid):
+        myquery = { 'uid': uid }
+        newvalues = { "$set": { "searched": True } }
+        self.db.update_one(myquery, newvalues)
 
-    def upload_result_thread(self):
-        # self.print('Pending: Start upload result thread ')
-        while True:
-            if self.result_queue.qsize() > 0:
+    def get_one_unsearched_uid(self):
+        return self.unsearched_uid_queue.get()
+
+
+
+
+    def search_neighbours(self):
+        get_followers_api = '/user/followeds'
+        uid = self.get_one_unsearched_uid()
+        params = {'uid': uid, 'limit': 50}
+        response = requests.get(self.api_server + get_followers_api, params=params, proxies=self.proxy_pool.get()).json()
+        if response['code'] != 200:
+            self.print('Fail: Unable to search neighbours of ' + str(uid))
+            self.print(response)
+            return False
+        neighbours = response['followeds']
+        self.set_uid_searched(uid)
+        for neighbour in neighbours:
+            self.upload_queue.put(neighbour['userId'])
+        return True
+
+    def search_neighbour_thread(self):
+        while not self.terminate:
+            if self.upload_queue.qsize() < self.upload_queue_max_size:
+                self.search_neighbours()
+            else:
+                time.sleep(1)
+
+    def upload_result(self):
+        if self.upload_queue.qsize() > 0:
+            uid = self.upload_queue.get()
+            self.insert_one_user(uid)
+            self.uploaded_num += 1
+            if self.uploaded_num % 100 == 0:
+                self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded')
+
+    def upload_thread(self):
+        while not self.terminate:
+            if self.upload_queue.qsize > self.upload_queue_min_size:
                 self.upload_result()
             else:
                 time.sleep(1)
-   
-    def search_neighbour_thread(self):
-        self.thread_num += 1
-        # self.print('Success: Start search neighbour thread ' + str(self.thread_num))
-        while True:
-            if self.result_queue.qsize() < 2000:
-                self.search_neighbours_for_one()
+
+    def refill_waiting_for_search_queue(self, size):
+        users = list(self.db.find({ 'searched': False }).limit(size))
+        if len(users) <= 0:
+            self.print('Fail: unable to refill the task queue')
+            return
+        for user in users:
+            self.unsearched_uid_queue.put(user['uid'])
+        self.print('Success: Finish refill the task queue with ' + str(len(users)) + ' data')
+
+    def refill_waiting_for_search_queue_thread(self):
+        while not self.terminate:
+            if self.waiting_for_search_queue.qsize() < self.waiting_for_search_queue_max_size:
+                self.refill_waiting_for_search_queue(500)
             else:
                 time.sleep(1)
 
-    def refill_task_queue_thread(self):
-        # self.print('Success: Start refill thread')
-        while True:
-            if self.task_queue.qsize() < 200:
-                self.refill_task_queue(100)
-            else:
-                time.sleep(1)
+    def start_searching_valid_users(self, search_thread_num, upload_thread_num, refill_thread_num):
+        for i in range(0, refill_thread_num):
+            self.refill_threads.append(threading.Thread(target=self.refill_waiting_for_search_queue_thread))
+        for i in range(0, search_thread_num):
+            self.refill_threads.append(threading.Thread(target=self.search_neighbour_thread))
+        for i in range(0, upload_thread_num):
+            self.refill_threads.append(threading.Thread(target=self.upload_thread))
+        self.print('Success: Start searching valid users task')
+
+
+
 
     def get_uid_samples(self, num):
         uids = queue.Queue()
@@ -195,7 +208,7 @@ class UserPool:
 
         if response['code'] == -2:
             # self.print('Fail: Unable to search ' + str(uid))
-            self.delete_one_uid(uid)
+            self.delete_one_user(uid)
             self.fail_search += 1
             self.total_search += 1
             return []
@@ -217,7 +230,7 @@ class UserPool:
         if len(cookies) == 0:
             self.print('i guess the account has issue, not cookie problem')
             print(cookies)
-            print(self.account_pool.available_cookie_queue.qsize())
+            print(self.account_pool.cookie_queue.qsize())
             return []
 
         response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
@@ -232,7 +245,7 @@ class UserPool:
 
         if response['code'] == -2:
             # self.print('Fail: Unable to search ' + str(uid))
-            self.delete_one_uid(uid)
+            self.delete_one_user(uid)
             self.fail_search += 1
             self.total_search += 1
             return []

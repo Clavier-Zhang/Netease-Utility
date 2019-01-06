@@ -137,9 +137,10 @@ password3 = 'qwe123'
 # user_pool.insert_one_uid(96389275)
 # user_pool.delete_duplicates()
 
-account = AccountPool(db_server, api_server, proxy_server)
+# account = AccountPool(db_server, api_server, proxy_server)
 
-# user_pool = UserPool(db_server, api_server, proxy_server)
+user_pool = UserPool(db_server, api_server, proxy_server)
+user_pool.start_searching_valid_users(1, 50, 200)
 # thread = ThreadPool()
 # thread.start_thread(user_pool.refill_task_queue_thread)
 # thread.start_threads(user_pool.upload_result_thread, 200)
@@ -147,5 +148,6 @@ account = AccountPool(db_server, api_server, proxy_server)
 
 # client = Client(db_server, api_server, proxy_server, test)
 # client.find_most_similar_user_in_samples(1000)
+
 
 
