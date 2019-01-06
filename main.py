@@ -129,22 +129,20 @@ password3 = 'qwe123'
 
 
 
-# account_pool = AccountPool(db_server, api_server, proxy_server)
+account_pool = AccountPool(db_server, api_server, proxy_server)
 # account_pool.delete_all_phones()
 # account_pool.insert_all_phones(accounts3, password3)
+# account_pool.insert_all_phones(accounts2, password2)
+# account_pool.insert_all_phones(accounts1, password1)
 
 # user_pool.delete_all_uids()
 # user_pool.insert_one_uid(96389275)
 # user_pool.delete_duplicates()
 
-# account = AccountPool(db_server, api_server, proxy_server)
 
-user_pool = UserPool(db_server, api_server, proxy_server)
-user_pool.start_searching_valid_users(1, 50, 200)
-# thread = ThreadPool()
-# thread.start_thread(user_pool.refill_task_queue_thread)
-# thread.start_threads(user_pool.upload_result_thread, 200)
-# thread.start_threads(user_pool.search_neighbour_thread, 50)
+# user_pool = UserPool(db_server, api_server, proxy_server)
+# user_pool.start_searching_valid_users(50, 200, 1)
+
 
 # client = Client(db_server, api_server, proxy_server, test)
 # client.find_most_similar_user_in_samples(1000)

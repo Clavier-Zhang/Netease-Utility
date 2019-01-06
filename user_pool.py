@@ -65,11 +65,15 @@ class UserPool:
         self.proxy_server = proxy_server
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.user
         self.proxy_pool = ProxyPool(self.proxy_server)
-        self.account_pool = AccountPool(self.db_server, self.api_server, self.proxy_server)
+        # self.account_pool = AccountPool(self.db_server, self.api_server, self.proxy_server)
+
+    def print(self, content):
+        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
+        print(content)
         
     def set_terminate(self):
         self.terminate = True
-        self.account_pool.set_terminate()
+        # self.account_pool.set_terminate()
         self.proxy_pool.set_terminate()
 
     def insert_one_user(self, uid):
@@ -108,15 +112,9 @@ class UserPool:
         newvalues = { "$set": { "searched": True } }
         self.db.update_one(myquery, newvalues)
 
-    def get_one_unsearched_uid(self):
-        return self.unsearched_uid_queue.get()
-
-
-
-
     def search_neighbours(self):
         get_followers_api = '/user/followeds'
-        uid = self.get_one_unsearched_uid()
+        uid = self.waiting_for_search_queue.get()
         params = {'uid': uid, 'limit': 50}
         response = requests.get(self.api_server + get_followers_api, params=params, proxies=self.proxy_pool.get()).json()
         if response['code'] != 200:
@@ -146,7 +144,7 @@ class UserPool:
 
     def upload_thread(self):
         while not self.terminate:
-            if self.upload_queue.qsize > self.upload_queue_min_size:
+            if self.upload_queue.qsize() > self.upload_queue_min_size:
                 self.upload_result()
             else:
                 time.sleep(1)
@@ -157,24 +155,32 @@ class UserPool:
             self.print('Fail: unable to refill the task queue')
             return
         for user in users:
-            self.unsearched_uid_queue.put(user['uid'])
-        self.print('Success: Finish refill the task queue with ' + str(len(users)) + ' data')
+            self.waiting_for_search_queue.put(user['uid'])
+        self.print('Success: Finish refill the task queue with ' + str(len(users)) + ' data' + ', ' + str(self.waiting_for_search_queue.qsize()) + ' wating for search')
 
     def refill_waiting_for_search_queue_thread(self):
         while not self.terminate:
             if self.waiting_for_search_queue.qsize() < self.waiting_for_search_queue_max_size:
                 self.refill_waiting_for_search_queue(500)
             else:
-                time.sleep(1)
+                time.sleep(2)
 
     def start_searching_valid_users(self, search_thread_num, upload_thread_num, refill_thread_num):
         for i in range(0, refill_thread_num):
-            self.refill_threads.append(threading.Thread(target=self.refill_waiting_for_search_queue_thread))
+            thread = threading.Thread(target=self.refill_waiting_for_search_queue_thread)
+            self.refill_threads.append(thread)
+            thread.start()
         for i in range(0, search_thread_num):
-            self.refill_threads.append(threading.Thread(target=self.search_neighbour_thread))
+            thread = threading.Thread(target=self.search_neighbour_thread)
+            self.refill_threads.append(thread)
+            thread.start()
         for i in range(0, upload_thread_num):
-            self.refill_threads.append(threading.Thread(target=self.upload_thread))
+            thread = threading.Thread(target=self.upload_thread)
+            self.refill_threads.append(thread)
+            thread.start()
         self.print('Success: Start searching valid users task')
+
+
 
 
 
@@ -186,80 +192,77 @@ class UserPool:
         return uids
 
 
-    def get_favourite_id_set(self, uid):
-        get_favourite_api = '/user/record'
-        params = {'uid': uid, 'type': 0}
-        cookies = self.account_pool.get_cookie()
-        if len(cookies) == 0:
-            self.print('i guess the account has issue, not cookie problem')
-            print(cookies)
-            print(self.account_pool.cookie_queue.qsize())
-            return []
+    # def get_favourite_id_set(self, uid):
+    #     get_favourite_api = '/user/record'
+    #     params = {'uid': uid, 'type': 0}
+    #     cookies = self.account_pool.get_cookie()
+    #     if len(cookies) == 0:
+    #         self.print('i guess the account has issue, not cookie problem')
+    #         print(cookies)
+    #         print(self.account_pool.cookie_queue.qsize())
+    #         return []
 
-        response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
+    #     response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
 
-        if response['code'] == -460:
-            print('detect cheating')
-            print(response)
+    #     if response['code'] == -460:
+    #         print('detect cheating')
+    #         print(response)
 
-            self.fail_search += 1
-            self.total_search += 1
-            return []
+    #         self.fail_search += 1
+    #         self.total_search += 1
+    #         return []
 
-        if response['code'] == -2:
-            # self.print('Fail: Unable to search ' + str(uid))
-            self.delete_one_user(uid)
-            self.fail_search += 1
-            self.total_search += 1
-            return []
-        songs = response['allData']
-        song_ids = set()
-        for song in songs:
-            song_ids.add(song['song']['song']['id'])
-        self.success_search += 1
-        self.total_search += 1
-        if self.total_search % 10 == 0:
-            self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
+    #     if response['code'] == -2:
+    #         # self.print('Fail: Unable to search ' + str(uid))
+    #         self.delete_one_user(uid)
+    #         self.fail_search += 1
+    #         self.total_search += 1
+    #         return []
+    #     songs = response['allData']
+    #     song_ids = set()
+    #     for song in songs:
+    #         song_ids.add(song['song']['song']['id'])
+    #     self.success_search += 1
+    #     self.total_search += 1
+    #     if self.total_search % 10 == 0:
+    #         self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
         
-        return song_ids
+    #     return song_ids
     
-    def get_all_song_id_set(self, uid):
-        get_favourite_api = '/user/record'
-        params = {'uid': uid, 'type': 0}
-        cookies = self.account_pool.get_cookie()
-        if len(cookies) == 0:
-            self.print('i guess the account has issue, not cookie problem')
-            print(cookies)
-            print(self.account_pool.cookie_queue.qsize())
-            return []
+    # def get_all_song_id_set(self, uid):
+    #     get_favourite_api = '/user/record'
+    #     params = {'uid': uid, 'type': 0}
+    #     cookies = self.account_pool.get_cookie()
+    #     if len(cookies) == 0:
+    #         self.print('i guess the account has issue, not cookie problem')
+    #         print(cookies)
+    #         print(self.account_pool.cookie_queue.qsize())
+    #         return []
 
-        response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
+    #     response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
 
-        if response['code'] == -460:
-            print('detect cheating')
-            print(response)
+    #     if response['code'] == -460:
+    #         print('detect cheating')
+    #         print(response)
 
-            self.fail_search += 1
-            self.total_search += 1
-            return []
+    #         self.fail_search += 1
+    #         self.total_search += 1
+    #         return []
 
-        if response['code'] == -2:
-            # self.print('Fail: Unable to search ' + str(uid))
-            self.delete_one_user(uid)
-            self.fail_search += 1
-            self.total_search += 1
-            return []
-        songs = response['allData']
-        song_ids = set()
-        for song in songs:
-            song_ids.add(song['song']['song']['id'])
-        self.success_search += 1
-        self.total_search += 1
-        if self.total_search % 10 == 0:
-            self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
+    #     if response['code'] == -2:
+    #         # self.print('Fail: Unable to search ' + str(uid))
+    #         self.delete_one_user(uid)
+    #         self.fail_search += 1
+    #         self.total_search += 1
+    #         return []
+    #     songs = response['allData']
+    #     song_ids = set()
+    #     for song in songs:
+    #         song_ids.add(song['song']['song']['id'])
+    #     self.success_search += 1
+    #     self.total_search += 1
+    #     if self.total_search % 10 == 0:
+    #         self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
         
-        return song_ids
+    #     return song_ids
 
-    def print(self, content):
-        print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
-        print(content)

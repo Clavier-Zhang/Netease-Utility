@@ -26,7 +26,7 @@ class ProxyPool:
         proxies = response.json()
         for proxy in proxies:
             self.proxy_queue.put({'https': proxy})
-        self.print('Success: Finish refilling the proxy pool with ' + str(self.proxy_queue.qsize()) + ' proxies')
+        # self.print('Success: Finish refilling the proxy pool with ' + str(self.proxy_queue.qsize()) + ' proxies')
 
     def refill_tasks(self):
         while not self.terminate:

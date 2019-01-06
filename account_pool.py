@@ -45,6 +45,11 @@ class AccountPool:
         for account in accounts:
             params = {'phone':account['phone'], 'password': account['password']}
             response = requests.get(self.api_server + '/login/cellphone', params=params, proxies=self.proxy_pool.get())
+            if response.json()['code'] == 415:
+                self.print('Fail: Unable to login for ' + str(account['phone']) + ', the proxy is invalid, try again later')
+                accounts.append(account)
+                fail += 1
+                continue
             if response.json()['code'] != 200:
                 print(response.json())
                 self.print('Fail: The account ' + str(account['phone'] + ' cannot login'))
@@ -52,7 +57,7 @@ class AccountPool:
                 continue
             success += 1
             self.source_cookies.append(response.cookies)
-        self.print('Success: Finish login, ' + str(success) + ' success' + str(fail) + ' fail')
+        self.print('Success: Finish login, ' + str(success) + ' success, ' + str(fail) + ' fail')
     
     def refill(self):
         for cookie in self.source_cookies:
