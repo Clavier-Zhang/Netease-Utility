@@ -34,9 +34,14 @@ class Client:
         start_time = datetime.datetime.now()
 
         self.waiting_task = self.user_pool.get_uid_samples(sample_num)
-        self.thread_pool.start_threads(self.compare_song_list_thread, 225)
-        self.thread_pool.join()
 
+        while self.user_pool.account_pool.available_cookie_queue.qsize() < 500:
+            print('wait for start')
+            time.sleep(1)
+
+        self.thread_pool.start_threads(self.compare_song_list_thread, 200)
+        self.thread_pool.join()
+        
         end_time = datetime.datetime.now()
         run_time = end_time - start_time
         self.print('Success: ' + str(self.user_pool.success_search) + ' valid search in ' + str(run_time.total_seconds()) + ' seconds')
@@ -45,18 +50,21 @@ class Client:
 
     def compare_song_list_thread(self):
         while self.waiting_task.qsize() > 0:
-            other = self.waiting_task.get()
-            # self.print('check ' + str(other))
-            other_song_ids = self.user_pool.get_song_id_set(other)
-            current_count = 0
-            for song_id in other_song_ids:
-                if song_id in self.client_song_id_set:
-                    current_count += 1
-            if current_count > self.same_song_num:
-                self.same_song_num = current_count
-                self.most_similar_uid = other
-                # print(self.same_song_num)
-                # print(self.most_similar_uid)
+            if not self.user_pool.account_pool.cookies_availble():
+                time.sleep(1)
+                print('sleep !!!!')
+                continue
+            else:
+                other = self.waiting_task.get()
+                other_song_ids = self.user_pool.get_song_id_set(other)
+                current_count = 0
+                for song_id in other_song_ids:
+                    if song_id in self.client_song_id_set:
+                        current_count += 1
+                if current_count > self.same_song_num:
+                    self.same_song_num = current_count
+                    self.most_similar_uid = other
+        self.user_pool.set_terminate()
 
     def print(self, content):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')

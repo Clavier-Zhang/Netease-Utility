@@ -2,7 +2,8 @@ import pymongo
 import requests
 import time
 from proxy_pool import ProxyPool
-
+import queue
+from thread_pool import ThreadPool
 
 class AccountPool:
 
@@ -18,23 +19,57 @@ class AccountPool:
     current_account_used_times = 0
     current_account_max_user_times = 20
 
-    def __init__(self, db_server, api_server):
+    all_cookies = []
+
+    available_cookie_queue = queue.Queue()
+
+    thread_pool = ''
+
+    proxy_pool = ''
+
+    terminate = False
+
+    def __init__(self, db_server, api_server, proxy_server):
+        self.print('Pending: Start initializing the account pool')
         self.api_server = api_server
         self.db_server = db_server
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
+        self.thread_pool = ThreadPool()
+        self.proxy_pool = ProxyPool(proxy_server)
+        accounts = list(self.db.find())
+        for account in accounts:
+            params = {'phone':account['phone'], 'password': account['password']}
+            response = requests.get(self.api_server + self.login_api, params=params, proxies=self.proxy_pool.get())
+            if response.json()['code'] != 200:
+                self.print('Fail: The account ' + str(account['phone'] + ' has issues, cannot login'))
+                continue
+            self.all_cookies.append(response.cookies)
+        for cookie in self.all_cookies:
+            self.available_cookie_queue.put(cookie)
+        self.thread_pool.start_threads(self.refill_thread, 1)
+        self.print('Success: Finish initializing the account pool')
+    
+    def refill(self):
+        for cookie in self.all_cookies:
+            self.available_cookie_queue.put(cookie)
+        # print('current queue size ' + str(self.available_cookie_queue.qsize()))
         
-        account = list(self.db.find().sort('used_times', -1).limit(1))[0]
-        params = {'phone':account['phone'], 'password': account['password']}
-        response = requests.get(self.api_server + self.login_api, params=params)
-        self.cookies = response.cookies
-        self.account = account
-        
+    def refill_thread(self):
+        self.print('Pending: Preparing cookies')
+        while not self.terminate:
+            if self.available_cookie_queue.qsize() < 1000:
+                self.refill()
+            else:
+                time.sleep(1)
+      
+    def set_terminate(self):
+        self.terminate = True
 
     def insert_one_phone(self, phone, password):
         sames = list(self.
         db.find({'phone':str(phone)}))
         if len(sames) > 0:
-            print('insert fail, ' +  str(phone) +  ' is repeated')
+            self.print('insert fail, ' +  str(phone) +  ' is repeated')
             return
         self.db.insert_one({'phone': str(phone), 'password': password, 'used_times':0})
         self.print('insert phone ' + str(phone) + ' successfully')
@@ -56,31 +91,15 @@ class AccountPool:
         return results[0]['phone']
 
     def getCookies(self):
-        self.current_account_used_times += 1
-        if self.current_account_used_times > self.current_account_max_user_times:
-            self.update_current_account()
-        return self.cookies
+        return self.available_cookie_queue.get()
+
+    def cookies_availble(self):
+        
+        return self.available_cookie_queue.qsize() > 0
 
     def print(self, content):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
         print(content)
-
-    def update_current_acount_used_times(self, times):
-        myquery = { "phone": self.account['phone'] }
-        newvalues = { "$set": { "used_times": self.account['used_times'] + times } }
-        self.db.update_one(myquery, newvalues)
-
-    def update_current_account(self):
-        self.update_current_acount_used_times(self.current_account_used_times)
-        account = list(self.db.find().sort('used_times', 1).limit(1))[0]
-        params = {'phone':account['phone'], 'password': self.common_password}
-        response = requests.get(self.api_server + self.login_api, params=params)
-        self.cookies = response.cookies
-        self.account = account
-        self.current_account_used_times = 0
-        self.print('update account to ' + str(self.account['phone'] + ' used times: ' + str(self.account['used_times'])))
-        
-        
 
 
 
