@@ -115,7 +115,6 @@ class Client:
         start_time = datetime.datetime.now()
 
         self.uid_queue = self.user_pool.get_uid_sample_queue(sample_num)
-        print(self.uid_queue.qsize())
         self.get_all_client_song_ids()
         for i in range(0, 200):
             thread = threading.Thread(target=self.compare_song_list_with_one_uid_thread)
