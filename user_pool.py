@@ -105,6 +105,7 @@ class UserPool:
         self.set_uid_searched(uid)
         for neighbour in neighbours:
             self.upload_queue.put(neighbour['userId'])
+#        print(len(neighbours))
         return True
 
     def search_neighbour_thread(self):
@@ -124,7 +125,7 @@ class UserPool:
 
     def upload_thread(self):
         while not self.terminate:
-            if self.upload_queue.qsize() > self.upload_queue_min_size:
+            if self.upload_queue.qsize() > 0:
                 self.upload_result()
             else:
                 time.sleep(1)
