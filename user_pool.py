@@ -8,9 +8,7 @@ import queue
 
 class UserPool:
 
-    db_server = ''
     api_server = ''
-    proxy_server = ''
 
     db = ''
 
@@ -19,14 +17,6 @@ class UserPool:
     uid_queue = queue.Queue()
     uid_queue_max_size = 1000
     uid_queue_min_size = 200
-
-
-    lock = threading.RLock()
-    thread_num = 0
-
-
-
-
 
     unsearched_uid_queue = queue.Queue()
     unsearched_uid_queue_min_size = 200
@@ -47,24 +37,14 @@ class UserPool:
     uploaded_num = 0
     terminate = False
 
-
-
-
-
-    success_search = 0
-    fail_search = 0
-    total_search = 0
-
     account_pool = ''
 
     
 
     def __init__(self, db_server, api_server, proxy_server):
-        self.db_server = db_server
         self.api_server = api_server
-        self.proxy_server = proxy_server
-        self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.user
-        self.proxy_pool = ProxyPool(self.proxy_server)
+        self.db = pymongo.MongoClient(db_server, 27017).net_ease.user
+        self.proxy_pool = ProxyPool(proxy_server)
         # self.account_pool = AccountPool(self.db_server, self.api_server, self.proxy_server)
 
     def print(self, content):
@@ -185,79 +165,4 @@ class UserPool:
         for user in self.db.aggregate([{ '$sample': { 'size': size } }]):
             uids.put(user['uid'])
         return uids
-
-
-    # def get_favourite_id_set(self, uid):
-    #     get_favourite_api = '/user/record'
-    #     params = {'uid': uid, 'type': 0}
-    #     cookies = self.account_pool.get_cookie()
-    #     if len(cookies) == 0:
-    #         self.print('i guess the account has issue, not cookie problem')
-    #         print(cookies)
-    #         print(self.account_pool.cookie_queue.qsize())
-    #         return []
-
-    #     response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
-
-    #     if response['code'] == -460:
-    #         print('detect cheating')
-    #         print(response)
-
-    #         self.fail_search += 1
-    #         self.total_search += 1
-    #         return []
-
-    #     if response['code'] == -2:
-    #         # self.print('Fail: Unable to search ' + str(uid))
-    #         self.delete_one_user(uid)
-    #         self.fail_search += 1
-    #         self.total_search += 1
-    #         return []
-    #     songs = response['allData']
-    #     song_ids = set()
-    #     for song in songs:
-    #         song_ids.add(song['song']['song']['id'])
-    #     self.success_search += 1
-    #     self.total_search += 1
-    #     if self.total_search % 10 == 0:
-    #         self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
-        
-    #     return song_ids
-    
-    # def get_all_song_id_set(self, uid):
-    #     get_favourite_api = '/user/record'
-    #     params = {'uid': uid, 'type': 0}
-    #     cookies = self.account_pool.get_cookie()
-    #     if len(cookies) == 0:
-    #         self.print('i guess the account has issue, not cookie problem')
-    #         print(cookies)
-    #         print(self.account_pool.cookie_queue.qsize())
-    #         return []
-
-    #     response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
-
-    #     if response['code'] == -460:
-    #         print('detect cheating')
-    #         print(response)
-
-    #         self.fail_search += 1
-    #         self.total_search += 1
-    #         return []
-
-    #     if response['code'] == -2:
-    #         # self.print('Fail: Unable to search ' + str(uid))
-    #         self.delete_one_user(uid)
-    #         self.fail_search += 1
-    #         self.total_search += 1
-    #         return []
-    #     songs = response['allData']
-    #     song_ids = set()
-    #     for song in songs:
-    #         song_ids.add(song['song']['song']['id'])
-    #     self.success_search += 1
-    #     self.total_search += 1
-    #     if self.total_search % 10 == 0:
-    #         self.print('Success: Finish ' + str(self.total_search) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
-        
-    #     return song_ids
 

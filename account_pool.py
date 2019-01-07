@@ -23,10 +23,23 @@ class AccountPool:
     refill_thread = ''
     terminate = False
 
+    account_for_login_queue = queue.Queue()
+    success_login = 0
+    fail_login = 0
+    login_threads = []
+
+    error_accounts = set()
+
+    session = ''
+
+    retry_success = 0
+
     def __init__(self, db_server, api_server, proxy_server):
         self.print('Pending: Start initializing the account pool')
         self.api_server = api_server
         self.db_server = db_server
+
+        self.session = requests.session()
 
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
         self.proxy_pool = ProxyPool(proxy_server)
@@ -40,24 +53,51 @@ class AccountPool:
 
     def login_accounts(self):
         accounts = list(self.db.find())
-        success = 0
-        fail = 0
         for account in accounts:
+            self.account_for_login_queue.put(account)
+        for i in range(0, 150):
+            thread = threading.Thread(target=self.login_thread)
+            self.login_threads.append(thread)
+            thread.start()
+        for thread in self.login_threads:
+            thread.join()
+        print(self.retry_success)
+        self.print('Success: Finish login, ' + str(self.success_login) + ' success, ' + str(self.fail_login) + ' fail')
+    
+    def login_one_account(self):
+        if self.account_for_login_queue.qsize() > 0:
+            account = self.account_for_login_queue.get()
             params = {'phone':account['phone'], 'password': account['password']}
-            response = requests.get(self.api_server + '/login/cellphone', params=params, proxies=self.proxy_pool.get())
+            headers = {
+                'Accept':"text/html, application/xhtml+xml, */*"
+                                }
+            response = self.session.get(self.api_server + '/login/cellphone', params=params, proxies=self.proxy_pool.get(), headers=headers)
             if response.json()['code'] == 415:
                 self.print('Fail: Unable to login for ' + str(account['phone']) + ', the proxy is invalid, try again later')
-                accounts.append(account)
-                fail += 1
-                continue
-            if response.json()['code'] != 200:
-                print(response.json())
+                self.account_for_login_queue.put(account)
+                self.fail_login += 1
+                return
+            if response.json()['code'] == 406:
+                if self.success_login > 50:
+                    return
                 self.print('Fail: The account ' + str(account['phone'] + ' cannot login'))
-                fail += 1
-                continue
-            success += 1
+                self.error_accounts.add(account['phone'])
+                self.account_for_login_queue.put(account)
+                self.fail_login += 1
+                return
+            if response.json()['code'] == 460:
+                self.print('Fail: Cheating')
+                self.fail_login += 1
+                return
+            if account['phone'] in self.error_accounts:
+                print('miracle!!!!!!')
+                self.retry_success += 1
+            self.success_login += 1
             self.source_cookies.append(response.cookies)
-        self.print('Success: Finish login, ' + str(success) + ' success, ' + str(fail) + ' fail')
+
+    def login_thread(self):
+        while self.account_for_login_queue.qsize() > 0:
+            self.login_one_account()
     
     def refill(self):
         for cookie in self.source_cookies:
@@ -72,9 +112,10 @@ class AccountPool:
       
     def set_terminate(self):
         self.terminate = True
+        self.proxy_pool.set_terminate()
 
     def is_available(self):
-        return self.cookie_queue > self.cookie_queue_min_size
+        return self.cookie_queue.qsize() > self.cookie_queue_min_size
 
     def insert_one_phone(self, phone, password):
         sames = list(self.db.find({'phone': str(phone)}))
