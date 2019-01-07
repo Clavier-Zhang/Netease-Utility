@@ -78,6 +78,7 @@ class Client:
     def get_favourite_id_set(self, uid):
         get_favourite_api = '/user/record'
         params = {'uid': uid, 'type': 0}
+
         if not self.account_pool.is_available() or not self.proxy_pool.is_available():
             print('Fail: The account pool or proxy pool is not available')
             self.uid_queue.put(uid)
@@ -103,9 +104,10 @@ class Client:
         self.success_search += 1
 
         total = self.success_search + self.fail_search
-        if total % 10 == 0:
+        if total % 50 == 0:
             self.print('Success: Finish ' + str(total) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
-        
+            self.print('The most similar user found is ' + str(self.most_similar_uid))
+            self.print('You have ' + str(self.same_song_num) + ' songs in common')
         return song_ids
 
     def find_most_similar_user_in_samples(self, sample_num):
