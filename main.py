@@ -7,9 +7,15 @@ from client import Client
 from proxy_pool import ProxyPool
 import time
 
+# server
 api_server = 'http://localhost:3000'
-proxy_server = 'www.clavier.moe:8088'
-db_server = 'www.clavier.moe'
+proxy_server = 'http://localhost:8088'
+db_server = 'localhost'
+
+# mac
+# api_server = 'http://localhost:3000'
+# proxy_server = 'www.clavier.moe:8088'
+# db_server = 'www.clavier.moe'
 clavier = 96389275
 test = 93441553
 
@@ -24,10 +30,10 @@ test = 93441553
 # user_pool.delete_duplicates()
 
 
-# user_pool = UserPool(db_server, api_server, proxy_server)
-# user_pool.start_searching_valid_users(50, 200, 1)
+user_pool = UserPool(db_server, api_server, proxy_server)
+user_pool.start_searching_valid_users(5, 20, 1)
 
 
-client = Client(db_server, api_server, proxy_server, clavier)
-client.find_most_similar_user_in_samples(10000)
+# client = Client(db_server, api_server, proxy_server, clavier)
+# client.find_most_similar_user_in_samples(10000)
 

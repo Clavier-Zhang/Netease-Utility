@@ -63,7 +63,7 @@ class AccountPool:
             thread.join()
         print(self.retry_success)
         self.print('Success: Finish login, ' + str(self.success_login) + ' success, ' + str(self.fail_login) + ' fail')
-    
+
     def login_one_account(self):
         if self.account_for_login_queue.qsize() > 0:
             account = self.account_for_login_queue.get()
@@ -98,18 +98,18 @@ class AccountPool:
     def login_thread(self):
         while self.account_for_login_queue.qsize() > 0:
             self.login_one_account()
-    
+
     def refill(self):
         for cookie in self.source_cookies:
             self.cookie_queue.put(cookie)
-        
+
     def refill_tasks(self):
         while not self.terminate:
             if self.cookie_queue.qsize() < self.cookie_queue_max_size:
                 self.refill()
             else:
                 time.sleep(1)
-      
+
     def set_terminate(self):
         self.terminate = True
         self.proxy_pool.set_terminate()
@@ -125,7 +125,7 @@ class AccountPool:
         self.db.insert_one({'phone': str(phone), 'password': password})
         self.print('Success: Finish inserting phone ' + str(phone))
         return True
-    
+
     def insert_all_phones(self, phones, password):
         success = 0
         fail = 0
