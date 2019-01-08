@@ -8,14 +8,14 @@ from proxy_pool import ProxyPool
 import time
 
 # server
-# api_server = 'http://www.clavier.moe:3001'
-# proxy_server = 'www.clavier.moe:8088'
-# db_server = 'localhost'
+api_server = 'http://www.clavier.moe:3001'
+proxy_server = 'www.clavier.moe:8088'
+db_server = 'localhost'
 
 # mac
-api_server = 'http://localhost:3000'
-proxy_server = 'www.clavier.moe:8088'
-db_server = 'www.clavier.moe'
+# api_server = 'http://localhost:3000'
+# proxy_server = 'www.clavier.moe:8088'
+# db_server = 'www.clavier.moe'
 clavier = 96389275
 test = 93441553
 
