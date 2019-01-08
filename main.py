@@ -30,10 +30,10 @@ test = 93441553
 # user_pool.delete_duplicates()
 
 
-user_pool = UserPool(db_server, api_server, proxy_server)
-user_pool.start_searching_valid_users(30)
+# user_pool = UserPool(db_server, api_server, proxy_server)
+# user_pool.start_searching_valid_users(30)
 
 
-# client = Client(db_server, api_server, proxy_server, clavier)
-# client.find_most_similar_user_in_samples(10000)
+client = Client(db_server, api_server, proxy_server, clavier)
+client.find_most_similar_user_in_samples(10000)
 
