@@ -6,22 +6,22 @@ import lombok.Data;
 public class Result {
 
 
-    public Result(String status) {
-        this.status = status;
+    public Result(int code) {
+        this.code = code;
     }
 
-    public Result(String status, String description) {
-        this.status = status;
+    public Result(int code, String description) {
+        this.code = code;
         this.description = description;
     }
 
-    public Result(String status, String description, Object obj) {
-        this.status = status;
+    public Result(int code, String description, Object obj) {
+        this.code = code;
         this.description = description;
         this.detail = obj;
     }
 
-    String status;
+    int code;
 
     String description;
 

@@ -2,12 +2,7 @@ package cloud.model.user;
 
 import javax.persistence.*;
 
-import cloud.model.user.role.Role;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Entity
@@ -19,21 +14,16 @@ public class User {
     @GeneratedValue
     private Long id;
 
-    private String email;
+    @Column(unique=true)
+    private Long uid;
 
-    @JsonIgnore
-    private String password;
+    private String nickname;
 
-    private String name;
+    private int gender;
 
-    @OneToMany
-    List<Role> roles = new ArrayList();
+    private Boolean searched = false;
 
-    public User(String _email, String _password, String _name) {
-        email = _email;
-        password = _password;
-        name = _name;
-    }
+    private Boolean visible = true;
 
     public User() {}
 

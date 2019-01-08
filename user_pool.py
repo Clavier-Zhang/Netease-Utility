@@ -32,6 +32,8 @@ class UserPool:
 
     upload_threads = []
     refill_threads = []
+    search_threads = []
+    success_upload = 0
 
     uploaded_num = 0
     terminate = False
@@ -40,11 +42,11 @@ class UserPool:
 
     
 
-    def __init__(self, db_server, api_server, proxy_server):
+    def __init__(self, db_server, api_server, proxy_server, sql_server):
         self.api_server = api_server
         self.db = pymongo.MongoClient(db_server, 27017).net_ease.user
         self.proxy_pool = ProxyPool(proxy_server)
-        # self.account_pool = AccountPool(self.db_server, self.api_server, self.proxy_server)
+        self.sql_server = sql_server
 
     def print(self, content):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
@@ -61,6 +63,25 @@ class UserPool:
             return False
         self.db.insert_one({'uid': uid, 'searched': False})
         return True
+
+    def insert_all_users(self, users):
+        response = requests.post('http://localhost:8080/api/user/save_all', json=users).json()
+        if response['code'] != 200:
+            self.print('Fail')
+            return
+        self.success_upload += 100
+        self.print('Success: ' + str(self.success_upload))
+        
+
+    def save_one_user(self, user):
+        response = requests.post('http://localhost:8080/api/user/save_one', data=user).json()
+        if response['code'] != 200:
+            self.print('Fail')
+            return
+        self.success_upload += 1
+        if self.success_upload % 10 == 0:
+            self.print('Success: ' + str(self.success_upload))
+
 
     def delete_all_users(self):
         self.db.delete_many({})
@@ -91,6 +112,12 @@ class UserPool:
         newvalues = { "$set": { "searched": True } }
         self.db.update_one(myquery, newvalues)
 
+
+
+    def search_neighbours_thread(self):
+        while not self.terminate and self.upload_queue.qsize() < self.upload_queue_max_size:
+            self.search_neighbours()
+
     def search_neighbours(self):
         get_followers_api = '/user/followeds'
         uid = self.waiting_for_search_queue.get()
@@ -103,22 +130,37 @@ class UserPool:
         neighbours = response['followeds']
         self.set_uid_searched(uid)
         for neighbour in neighbours:
-            self.upload_queue.put(neighbour['userId'])
+            user = {
+                'uid': neighbour['userId'],
+                'gender': neighbour['gender'],
+                'nickname': neighbour['nickname']
+            }
+            self.upload_queue.put(user)
         return True
 
     def upload_result(self):
         if self.upload_queue.qsize() > 0:
-            uid = self.upload_queue.get()
-            self.insert_one_user(uid)
-            self.uploaded_num += 1
+            users = []
+            for i in range(0, 100):
+                users.append(self.upload_queue.get())
+            self.insert_all_users(users)
+            # user = self.upload_queue.get()
+
+            # user_list = []
+            # for i in range(0,100):
+            #     user_list.append(self.upload_queue.get())
+            # uid = self.upload_queue.get()
+            # self.insert_one_user(uid)
+
+            # self.save_one_user(user)
+
+            # self.uploaded_num += 1
             # if self.uploaded_num % 100 == 0:
             #     self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded')
-        if self.upload_queue.qsize() < self.upload_queue_max_size:
-            self.search_neighbours()
 
     def upload_thread(self):
         while not self.terminate:
-            if self.upload_queue.qsize() > 0:
+            if self.upload_queue.qsize() > 100:
                 self.upload_result()
 
     def refill_waiting_for_search_queue(self, size):
@@ -137,13 +179,17 @@ class UserPool:
             else:
                 time.sleep(2)
 
-    def start_searching_valid_users(self, upload_thread_num):
+    def start_searching_valid_users(self, upload_thread_num, search_thread_num):
         thread = threading.Thread(target=self.refill_waiting_for_search_queue_thread)
         self.refill_threads.append(thread)
         thread.start()
         for i in range(0, upload_thread_num):
             thread = threading.Thread(target=self.upload_thread)
             self.refill_threads.append(thread)
+            thread.start()
+        for i in range(0, search_thread_num):
+            thread = threading.Thread(target=self.search_neighbours_thread)
+            self.search_threads.append(thread)
             thread.start()
         self.print('Success: Start searching valid users task')
 
