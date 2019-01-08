@@ -111,15 +111,15 @@ class UserPool:
             uid = self.upload_queue.get()
             self.insert_one_user(uid)
             self.uploaded_num += 1
-            if self.uploaded_num % 100 == 0:
-                self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded')
+            # if self.uploaded_num % 100 == 0:
+            #     self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded')
         if self.upload_queue.qsize() < self.upload_queue_max_size:
             self.search_neighbours()
 
     def upload_thread(self):
         while not self.terminate:
-            self.upload_result()
-
+            if self.upload_queue.qsize() > 0:
+                self.upload_result()
 
     def refill_waiting_for_search_queue(self, size):
         users = list(self.db.find({ 'searched': False }).limit(size))

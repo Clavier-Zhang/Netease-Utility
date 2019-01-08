@@ -23,6 +23,9 @@ class Client:
     most_similar_uid = 0
     same_song_num = -1
 
+    similar_user_list = []
+    similar_min = 20
+
     fail_search = 0
     success_search = 0
 
@@ -46,8 +49,14 @@ class Client:
 
     def get_all_client_song_ids(self):
         play_list_ids = self.get_all_client_play_list_ids()
+        threads = []
         for play_list_id in play_list_ids:
-            self.get_all_song_ids_in_play_list_to_set(play_list_id)
+            thread = threading.Thread(target=self.get_all_song_ids_in_play_list_to_set, args=[play_list_id])
+            thread.start()
+            threads.append(thread)
+            # self.get_all_song_ids_in_play_list_to_set(play_list_id)
+        for thread in threads:
+            thread.join()
         self.print('Success: Finish fetching all ' + str(len(self.client_song_id_set)) + ' client song ids')
 
     def get_all_client_play_list_ids(self):
@@ -80,14 +89,14 @@ class Client:
         params = {'uid': uid, 'type': 0}
 
         if not self.account_pool.is_available() or not self.proxy_pool.is_available():
-            print('Fail: The account pool or proxy pool is not available')
+            # print('Fail: The account pool or proxy pool is not available')
             self.uid_queue.put(uid)
             return []
         response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=self.account_pool.get_cookie()).json()
 
         if response['code'] == -460:
-            self.print('Fail: Detect cheating')
-            print(response)
+            # self.print('Fail: Detect cheating')
+            # print(response)
             self.fail_search += 1
             return []
 
@@ -106,8 +115,8 @@ class Client:
         total = self.success_search + self.fail_search
         if total % 50 == 0:
             self.print('Success: Finish ' + str(total) + ' in total, ' + str(self.success_search) + ' success , ' + str(self.fail_search) + ' fail')
-            self.print('The most similar user found is ' + str(self.most_similar_uid))
-            self.print('You have ' + str(self.same_song_num) + ' songs in common')
+            self.print('The most similar user found is ')
+            print(self.similar_user_list)
         return song_ids
 
     def find_most_similar_user_in_samples(self, sample_num):
@@ -128,8 +137,8 @@ class Client:
         run_time = end_time - start_time
         self.set_terminate()
         self.print('Success: ' + str(self.success_search) + ' success search in ' + str(run_time.total_seconds()) + ' seconds')
-        self.print('The most similar user found is ' + str(self.most_similar_uid))
-        self.print('You have ' + str(self.same_song_num) + ' songs in common')
+        # self.print('The most similar user found is ' + str(self.most_similar_uid))
+        # self.print('You have ' + str(self.same_song_num) + ' songs in common')
 
     def compare_song_list_with_one_uid_thread(self):
         while not self.terminate:
@@ -143,9 +152,8 @@ class Client:
             for song_id in target_favourite_song_id_set:
                 if song_id in self.client_song_id_set:
                     count += 1
-            if count > self.same_song_num:
-                self.same_song_num = count
-                self.most_similar_uid = target_uid
+            if count > self.similar_min:
+                self.similar_user_list.append({'uid': target_uid, 'same': count})
         else: 
             self.set_terminate()
 
