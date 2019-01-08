@@ -8,14 +8,14 @@ from proxy_pool import ProxyPool
 import time
 
 # server
-api_server = 'http://www.clavier.moe:3001'
-proxy_server = 'www.clavier.moe:8088'
-db_server = 'localhost'
+# api_server = 'http://www.clavier.moe:3001'
+# proxy_server = 'www.clavier.moe:8088'
+# db_server = 'localhost'
 
 # mac
-# api_server = 'http://localhost:3000'
-# proxy_server = 'www.clavier.moe:8088'
-# db_server = 'www.clavier.moe'
+api_server = 'http://localhost:3000'
+proxy_server = 'www.clavier.moe:8088'
+db_server = 'www.clavier.moe'
 clavier = 96389275
 test = 93441553
 
@@ -31,7 +31,7 @@ test = 93441553
 
 
 user_pool = UserPool(db_server, api_server, proxy_server)
-user_pool.start_searching_valid_users(50, 200, 1)
+user_pool.start_searching_valid_users(30)
 
 
 # client = Client(db_server, api_server, proxy_server, clavier)
