@@ -16,7 +16,7 @@ import time
 api_server = 'http://localhost:3000'
 proxy_server = 'www.clavier.moe:8088'
 db_server = 'www.clavier.moe'
-sql_server = 'http://localhost:8080'
+# sql_server = 'http://localhost:8080'
 
 clavier = 96389275
 test = 93441553
@@ -32,8 +32,9 @@ test = 93441553
 # user_pool.delete_duplicates()
 
 
-user_pool = UserPool(db_server, api_server, proxy_server, sql_server)
-user_pool.start_searching_valid_users(3,30)
+user_pool = UserPool(db_server, api_server, proxy_server)
+# user_pool.start_searching_valid_users(50, 50)
+user_pool.insert_one_user({'uid'})
 
 
 # client = Client(db_server, api_server, proxy_server, clavier)
