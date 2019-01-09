@@ -14,14 +14,6 @@ class UserPool:
 
     proxy_pool = ''
 
-    uid_queue = queue.Queue()
-    uid_queue_max_size = 1000
-    uid_queue_min_size = 200
-
-    unsearched_uid_queue = queue.Queue()
-    unsearched_uid_queue_min_size = 200
-    unsearched_uid_queue_max_size = 1000
-
     upload_queue = queue.Queue()
     upload_queue_min_size = 0
     upload_queue_max_size = 1000
@@ -33,14 +25,12 @@ class UserPool:
     upload_threads = []
     refill_threads = []
     search_threads = []
+
     success_upload = 0
     fail_upload = 0
-
     uploaded_num = 0
+
     terminate = False
-
-    account_pool = ''
-
     
 
     def __init__(self, db_server, api_server, proxy_server):
@@ -55,35 +45,6 @@ class UserPool:
     def set_terminate(self):
         self.terminate = True
         self.proxy_pool.set_terminate()
-
-    def insert_one_user(self, user):
-        # sames = list(self.db.find({'uid': user['uid']}))
-        # if len(sames) > 0:
-        #     return False
-        try:
-            self.db.insert_one(user)
-        except:
-            self.fail_upload += 1
-        self.success_upload += 1
-        return True
-
-    # def insert_all_users(self, users):
-    #     response = requests.post('http://localhost:8080/api/user/save_all', json=users).json()
-    #     if response['code'] != 200:
-    #         self.print('Fail')
-    #         return
-    #     self.success_upload += 100
-    #     self.print('Success: ' + str(self.success_upload))
-        
-    # def save_one_user(self, user):
-        # response = requests.post('http://localhost:8080/api/user/save_one', data=user).json()
-        # if response['code'] != 200:
-        #     self.print('Fail')
-        #     return
-        # self.success_upload += 1
-        # if self.success_upload % 10 == 0:
-        #     self.print('Success: ' + str(self.success_upload))
-
 
     def delete_all_users(self):
         self.db.delete_many({})
@@ -108,6 +69,20 @@ class UserPool:
         print(response)
         self.db.remove({"_id": {"$in": response}})
         self.print('Success: Finish deleting ' + str(len(response)) + ' duplicates')
+
+
+
+
+
+
+
+    def insert_one_user(self, user):
+        try:
+            self.db.insert_one(user)
+        except:
+            self.fail_upload += 1
+        self.success_upload += 1
+
 
     def set_uid_searched(self, uid):
         myquery = { 'uid': uid }
@@ -150,7 +125,6 @@ class UserPool:
         if self.upload_queue.qsize() > 0:
             self.print
             user = self.upload_queue.get()
-            # self.print("upload" + struser['uid'])
             self.insert_one_user(user)
 
             self.uploaded_num += 1
