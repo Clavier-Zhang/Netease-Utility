@@ -76,23 +76,6 @@ class UserPool:
 
 
 
-    def insert_one_user(self, user):
-        try:
-            self.db.insert_one(user)
-        except:
-            self.fail_upload += 1
-        self.success_upload += 1
-
-
-    def set_uid_searched(self, uid):
-        myquery = { 'uid': uid }
-        newvalues = { "$set": { "searched": True } }
-        self.db.update_one(myquery, newvalues)
-
-
-
-
-
     def search_neighbours_thread(self):
         while not self.terminate:
             if self.upload_queue.qsize() < self.upload_queue_max_size:
@@ -110,7 +93,11 @@ class UserPool:
                 self.print(response)
                 return False
             neighbours = response['followeds']
-            self.set_uid_searched(uid)
+            # set the uid searched
+            myquery = { 'uid': uid }
+            newvalues = { "$set": { "searched": True } }
+            self.db.update_one(myquery, newvalues)
+            # put the result in the upload queue
             for neighbour in neighbours:
                 user = {
                     'uid': neighbour['userId'],
@@ -121,15 +108,19 @@ class UserPool:
                 }
                 self.upload_queue.put(user)
 
+    def upload_one_user(self, user):
+        try:
+            self.db.insert_one(user)
+        except:
+            self.fail_upload += 1
+        self.success_upload += 1
+
+
     def upload_result(self):
         if self.upload_queue.qsize() > 0:
-            self.print
             user = self.upload_queue.get()
-            self.insert_one_user(user)
-
-            self.uploaded_num += 1
-            
-            if self.uploaded_num % 100 == 0:
+            self.upload_one_user(user)
+            if (self.fail_upload+self.success_upload) % 100 == 0:
                 self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded ' + str(self.waiting_for_search_queue.qsize()))
         if self.upload_queue.qsize() < self.waiting_for_search_queue_max_size:
             self.search_neighbours()
@@ -138,14 +129,12 @@ class UserPool:
         while not self.terminate:
             self.upload_result()
             
-            
+
+
+
 
     def refill_waiting_for_search_queue(self, size):
         users = list(self.db.find({ 'searched': False }).limit(size))
-        if len(users) <= 0:
-            self.print('Fail: unable to refill the task queue')
-            return
-        # self.print(users)
         for user in users:
             self.waiting_for_search_queue.put(user['uid'])
         self.print('Success: Finish refill the task queue with ' + str(len(users)) + ' data' + ', ' + str(self.waiting_for_search_queue.qsize()) + ' wating for search' )
@@ -155,7 +144,11 @@ class UserPool:
             if self.waiting_for_search_queue.qsize() < self.waiting_for_search_queue_min_size:
                 self.refill_waiting_for_search_queue(1000)
 
+
+
+
     def start_searching_valid_users(self, upload_thread_num):
+        self.print('Pending: Start searching valid users')
         
         thread = threading.Thread(target=self.refill_waiting_for_search_queue_thread)
         self.refill_threads.append(thread)
@@ -166,8 +159,12 @@ class UserPool:
             self.refill_threads.append(thread)
             thread.start()
         
-        self.print('Success: Start searching valid users task')
 
+
+
+
+        
+        
     def get_uid_sample_queue(self, size):
         uids = queue.Queue()
         query = [
@@ -177,6 +174,16 @@ class UserPool:
         for user in self.db.aggregate(query):
             uids.put(user['uid'])
         return uids
+
+    def get_girl_user_sample_queue(self, size):
+        user_queue = queue.Queue()
+        query = [
+            { '$sample': { 'size': size } },
+            { '$match': {'searched': False, 'girl': True} }
+        ]
+        for user in self.db.aggregate(query):
+            user_queue.put(user)
+        return user_queue
 
     
 
