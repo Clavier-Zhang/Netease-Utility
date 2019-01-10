@@ -120,8 +120,9 @@ class UserPool:
         if self.upload_queue.qsize() > 0:
             user = self.upload_queue.get()
             self.upload_one_user(user)
-            if (self.fail_upload+self.success_upload) % 100 == 0:
-                self.print('Success: Finish upload ' + str(self.uploaded_num) + ' results, ' + str(self.upload_queue.qsize()) + ' to be uploaded ' + str(self.waiting_for_search_queue.qsize()))
+            if (self.fail_upload+self.success_upload) % 200 == 0:
+                self.print('Success: Finish upload ' + str(self.fail_upload+self.success_upload) + ' results, ' + str(self.success_upload) + ' success, ' + str(self.fail_upload) + ' fail')
+                self.print('Success: ' + str(self.upload_queue.qsize()) + ' to be uploaded ' + str(self.waiting_for_search_queue.qsize()) + ' waiting for search')
         if self.upload_queue.qsize() < self.waiting_for_search_queue_max_size:
             self.search_neighbours()
 
@@ -163,26 +164,31 @@ class UserPool:
 
 
 
-        
+
         
     def get_uid_sample_queue(self, size):
-        uids = queue.Queue()
+        user_queue = queue.Queue()
         query = [
             { '$sample': { 'size': size } },
             { '$match': {'searched': False} }
         ]
         for user in self.db.aggregate(query):
-            uids.put(user['uid'])
-        return uids
+            user_queue.put(user)
+        return user_queue
+
+
 
     def get_girl_user_sample_queue(self, size):
         user_queue = queue.Queue()
         query = [
             { '$sample': { 'size': size } },
-            { '$match': {'searched': False, 'girl': True} }
+            { '$match': {'gender': 2} }
         ]
         for user in self.db.aggregate(query):
             user_queue.put(user)
+        print('')
+        print(user_queue.qsize())
+        print('')
         return user_queue
 
     
