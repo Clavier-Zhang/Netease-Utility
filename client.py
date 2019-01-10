@@ -25,7 +25,7 @@ class Client:
     same_song_num = -1
 
     similar_user_list = []
-    similar_min = 20
+    similar_min = 15
 
     fail_search = 0
     success_search = 0
@@ -106,16 +106,20 @@ class Client:
         get_favourite_api = '/user/record'
         params = {'uid': uid, 'type': 0}
 
+        cookie_unit = self.account_pool.get_cookie_unit()
+        cookies = cookie_unit['cookies']
+
         if not self.account_pool.is_available() or not self.proxy_pool.is_available():
             # print('Fail: The account pool or proxy pool is not available')
             self.uid_queue.put(uid)
             return []
-        response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=self.account_pool.get_cookie()).json()
+        response = requests.get(self.api_server + get_favourite_api, params=params, proxies=self.proxy_pool.get(), cookies=cookies).json()
 
         if response['code'] == -460:
             # self.print('Fail: Detect cheating')
             self.fail_search += 1
             self.cheat_search += 1
+            self.account_pool.remove_cheat_source(cookie_unit['phone'])
             return []
 
         if response['code'] == -2:

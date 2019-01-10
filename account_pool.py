@@ -32,6 +32,8 @@ class AccountPool:
 
     session = ''
 
+    lowerst_account_num = 80
+
     def __init__(self, db_server, api_server, proxy_server):
         self.print('Pending: Start initializing the account pool')
         self.api_server = api_server
@@ -40,10 +42,9 @@ class AccountPool:
         self.session = requests.session()
 
         self.db = pymongo.MongoClient(self.db_server, 27017).net_ease.account
+
         self.proxy_pool = ProxyPool(proxy_server)
-
         self.login_accounts()
-
         self.refill_thread = threading.Thread(target=self.refill_tasks)
         self.refill_thread.start()
 
@@ -106,7 +107,7 @@ class AccountPool:
                 self.fail_login += 1
                 return
             if response.json()['code'] == 406:
-                if self.success_login > 50:
+                if self.success_login > self.lowerst_account_num:
                     return
                 self.print('Fail: The account ' + str(account['phone'] + ' cannot login'))
                 self.error_accounts.add(account['phone'])
@@ -120,15 +121,15 @@ class AccountPool:
             if account['phone'] in self.error_accounts:
                 print('miracle!!!!!!')
             self.success_login += 1
-            self.source_cookies.append(response.cookies)
+            self.source_cookies.append({'phone': account['phone'], 'cookies': response.cookies})
 
     def login_thread(self):
         while self.account_for_login_queue.qsize() > 0:
             self.login_one_account()
 
     def refill(self):
-        for cookie in self.source_cookies:
-            self.cookie_queue.put(cookie)
+        for cookie_unit in self.source_cookies:
+            self.cookie_queue.put(cookie_unit)
 
     def refill_tasks(self):
         while not self.terminate:
@@ -144,8 +145,28 @@ class AccountPool:
     def is_available(self):
         return self.cookie_queue.qsize() > self.cookie_queue_min_size
 
-    def get_cookie(self):
+    def get_cookie_unit(self):
         return self.cookie_queue.get()
+
+    def load_accounts(self, filename):
+        file = open(filename, 'r')
+        for line in file:
+            is_pass = False
+            username = ''
+            password = ''
+            for word in line.split():
+                if not is_pass:
+                    username = word
+                    is_pass = True
+                else:
+                    password = word
+            self.insert_one_phone(username, password)
+
+    def remove_cheat_source(self, phone):
+        for cookie in self.source_cookies:
+            if cookie['phone'] == phone:
+                self.source_cookies.remove(cookie)
+        # self.print('Success: Finish remove cheat cookie, remain ' + str(len(self.source_cookies)))
 
     
 

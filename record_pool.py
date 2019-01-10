@@ -64,7 +64,11 @@ class RecordPool:
         if is_girl:
             lower_gender = 2
         query = [
-            { '$match': { '$and': [{'same_num': {'$gte': lower_bound}}, {'target_gender': {'$gte': lower_gender, '$lte': upper_gender}}]}},
+            { '$match': { '$and': [
+                    {'same_num': {'$gte': lower_bound}}, 
+                    {'target_gender': {'$gte': lower_gender, '$lte': upper_gender}},
+                    {'client_uid': client_uid}
+                ]}},
             { '$sort': { 'same_num': -1}}
         ]
         records = list(self.db.aggregate(query))

@@ -22,22 +22,18 @@ db_server = 'www.clavier.moe'
 clavier = 96389275
 test = 93441553
 saq = 108815806
+tyt = 313306095
 
-
-
-# account_pool = AccountPool(db_server, api_server, proxy_server)
-# account_pool.delete_all_phones()
-# account_pool.insert_all_phones(accounts3, password3)
 
 
 # user_pool = UserPool(db_server, api_server, proxy_server)
 # user_pool.start_searching_valid_users(5)
 
 
-client = Client(db_server, api_server, proxy_server, clavier)
-client.find_most_similar_user_in_samples(1000, False)
+# client = Client(db_server, api_server, proxy_server, clavier)
+# client.find_most_similar_user_in_samples(10000, False)
+# client.find_most_similar_user_in_samples(10000, True)
+# client.find_most_similar_user_in_samples(10000, True)
 
-
-
-# record_pool = RecordPool(db_server, api_server)
-# record_pool.get_record(clavier, 20, False)
+record_pool = RecordPool(db_server, api_server)
+record_pool.get_record(clavier, 30, False)
