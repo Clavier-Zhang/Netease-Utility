@@ -36,7 +36,7 @@ class Client:
     threads = []
     terminate = False
 
-    def __init__(self, db_server, api_server, proxy_server, client_uid):
+    def __init__(self, db_server, api_server, proxy_server, client_uid, similar_min=15):
         self.api_server = api_server
         self.client_uid = client_uid
 
@@ -44,6 +44,7 @@ class Client:
         self.user_pool = UserPool(db_server, api_server, proxy_server)
         self.proxy_pool = ProxyPool(proxy_server)
         self.record_pool = RecordPool(db_server, api_server)
+        self.similar_min = similar_min
         
     def print(self, content):
         print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()), end=': ')
@@ -159,7 +160,9 @@ class Client:
                 if song_id in self.client_song_id_set:
                     count += 1
             if count > self.similar_min:
-                self.similar_user_list.append({'target_uid': target_uid, 'same_num': count, 'target_nickname': target_nickname, 'target_gender': target_gender})
+                target_user = {'target_uid': target_uid, 'same_num': count, 'target_nickname': target_nickname, 'target_gender': target_gender}
+                self.similar_user_list.append(target_user)
+                self.record_pool.upload_one_record(self.client_uid, target_user)
         else: 
             self.set_terminate()
 
@@ -189,6 +192,6 @@ class Client:
 
         self.print('Success: ' + str(self.success_search) + ' success search in ' + str(run_time.total_seconds()) + ' seconds')
         
-        self.record_pool.upload_all_records(self.client_uid, self.similar_user_list)
+        # self.record_pool.upload_all_records(self.client_uid, self.similar_user_list)
         # self.print('The most similar user found is ' + str(self.most_similar_uid))
         # self.print('You have ' + str(self.same_song_num) + ' songs in common')
